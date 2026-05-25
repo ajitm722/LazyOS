@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ajitm722/lazyos/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/daemons"
 )
 
 var _ daemons.Queryer = (*MockQueryer)(nil)

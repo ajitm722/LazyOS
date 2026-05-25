@@ -1,7 +1,9 @@
-.PHONY: help build run run-with-defaults test clean format watch-logs clean-default-logs
+.PHONY: help build run run-with-defaults test test-verbose test-force test-integration test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
 
 # Default binary name
 BINARY_NAME=lazyos
+
+OSQUERY_BIN := ./build/osquery/osqueryd
 
 help: ## Show this help menu
 	@echo "Usage: make [target]"
@@ -9,10 +11,45 @@ help: ## Show this help menu
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+setup-sandbox: ## Interactively prompt to download and setup the local osquery daemon
+	@if [ ! -f $(OSQUERY_BIN) ]; then \
+		echo "LazyOS requires a local osquery daemon to run the sandbox."; \
+		read -p "Do you want to download osquery into ./build/osquery? (y/N): " confirm; \
+		if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+			echo "Download cancelled. Sandbox setup aborted."; \
+			exit 1; \
+		fi; \
+		echo "Downloading osquery-5.11.0..."; \
+		rm -rf ./build/osquery; \
+		mkdir -p ./build/osquery; \
+		curl -L -s -f https://pkg.osquery.io/linux/osquery-5.11.0_1.linux_x86_64.tar.gz | tar -xz -C ./build/osquery; \
+		echo "Locating and moving osqueryd binary..."; \
+		find ./build/osquery -type f -name "osqueryd" -exec mv {} $(OSQUERY_BIN) \; ; \
+		chmod +x $(OSQUERY_BIN); \
+		echo "Download complete."; \
+	else \
+		echo "Sandbox dependency (osqueryd) already exists. Skipping download."; \
+	fi
+
 build: ## Build the lazyos binary
 	@echo "Building $(BINARY_NAME)..."
 	@go build -o $(BINARY_NAME) ./cmd/lazyos
 
+run-sandbox: setup-sandbox build ## Run LazyOS in an isolated sandbox with an ephemeral daemon
+	@echo "Launching LazyOS in sandbox..."
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) ./$(BINARY_NAME) --osquery-socket=LAZYOS_TEST_SOCKET
+	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
+
+test-integration: setup-sandbox ## Run integration tests (summary) against a live, ephemeral osquery daemon
+	@echo "Running integration tests..."
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format pkgname -- -tags=integration ./internal/daemons/osquery/...
+	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
+
+test-integration-verbose: setup-sandbox ## Run integration tests with verbose output against a live, ephemeral osquery daemon
+	@echo "Running integration tests (verbose)..."
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format standard-verbose -- -tags=integration ./internal/daemons/osquery/...
+	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
+	
 run: ## Run LazyOS interactively, prompting for configuration flags
 	@echo "Configuring LazyOS (press Enter to accept defaults)..."
 	@echo ""
@@ -76,7 +113,7 @@ test-coverage: ## Run tests and display coverage in CLI (only packages with test
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
 	@echo "    - internal/config         (types-only package, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osquery    (requires live osquery socket; integration test candidate — TODO)"
+	@echo "    - internal/daemons/osquery    (requires live osquery socket; run via 'make test-integration')"
 	@echo ""
 	@gotestsum --format pkgname -- -cover $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 
@@ -95,14 +132,18 @@ test-coverage-html: ## Run tests and open HTML coverage report in browser (only 
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
 	@echo "    - internal/config         (types-only package, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osquery    (requires live osquery socket; integration test candidate — TODO)"
+	@echo "    - internal/daemons/osquery    (requires live osquery socket; run via 'make test-integration')"
 	@echo ""
 	@gotestsum --format pkgname -- -coverprofile=coverage.out $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 	@go tool cover -html=coverage.out
 
-clean: ## Remove build artifacts
-	@echo "Cleaning up..."
+clean: ## Remove build artifacts and the downloaded osquery daemon
+	@echo "Cleaning up build artifacts..."
 	@rm -f $(BINARY_NAME)
+	@if [ -d "./build" ]; then \
+		rm -rf ./build; \
+		echo "Removed ./build directory."; \
+	fi
 
 watch-logs: ## Tail and pretty-print a lazyos log file (prompts for path, defaults ~/.local/state/lazyos/lazyos.log)
 	@echo "Configuring LazyOS (press Enter to accept defaults)..."; \

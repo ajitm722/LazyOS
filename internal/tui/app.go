@@ -14,12 +14,12 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/ajitm722/lazyos/internal/config"
-	"github.com/ajitm722/lazyos/internal/daemons"
-	"github.com/ajitm722/lazyos/internal/logger"
-	"github.com/ajitm722/lazyos/internal/tui/views/querybar"
-	"github.com/ajitm722/lazyos/internal/tui/views/results"
-	"github.com/ajitm722/lazyos/internal/tui/views/sidebar"
+	"github.com/ajitm722/LazyOS/internal/config"
+	"github.com/ajitm722/LazyOS/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/logger"
+	"github.com/ajitm722/LazyOS/internal/tui/views/querybar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/results"
+	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 )
 
 // AppModel is the root Bubble Tea model. It owns the Layout, input routing,

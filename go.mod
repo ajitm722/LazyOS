@@ -1,4 +1,4 @@
-module github.com/ajitm722/lazyos
+module github.com/ajitm722/LazyOS
 
 go 1.26
 

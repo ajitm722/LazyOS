@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/ajitm722/lazyos/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/daemons"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ajitm722/lazyos/internal/daemons/mock"
+	"github.com/ajitm722/LazyOS/internal/daemons/mock"
 )
 
 // TestComputePaneBounds verifies the three-pane fractional math for a range

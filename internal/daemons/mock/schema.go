@@ -1,6 +1,6 @@
 package mock
 
-import "github.com/ajitm722/lazyos/internal/daemons"
+import "github.com/ajitm722/LazyOS/internal/daemons"
 
 // MockTables contains the catalog of tables used in mock tests.
 var MockTables = []daemons.TableSchema{

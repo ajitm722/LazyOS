@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ajitm722/lazyos/internal/config"
-	"github.com/ajitm722/lazyos/internal/daemons"
-	"github.com/ajitm722/lazyos/internal/logger"
+	"github.com/ajitm722/LazyOS/internal/config"
+	"github.com/ajitm722/LazyOS/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/logger"
 	goosquery "github.com/osquery/osquery-go"
 )
 

@@ -120,6 +120,10 @@ While both Thrift and gRPC are RPC frameworks used for inter-process communicati
 
 ## Data Flow
 
+### Schema Validation
+
+The `CoreTables` catalog in `internal/daemons/osquery/schema.go` is validated against the live daemon in the integration test suite. Every declared column is checked via `PRAGMA table_info` to ensure it exists in the actual osquery schema, and every table is verified to be queryable with `SELECT COUNT(*)`. See `docs/osquery_integration_test.md` for details.
+
 ### Column Resolution
 
 Column names are resolved from the osquery response data when rows are present, with a schema fallback for empty results:

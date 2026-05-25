@@ -14,11 +14,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/ajitm722/lazyos/internal/config"
-	"github.com/ajitm722/lazyos/internal/daemons"
-	"github.com/ajitm722/lazyos/internal/daemons/osquery"
-	"github.com/ajitm722/lazyos/internal/logger"
-	"github.com/ajitm722/lazyos/internal/tui"
+	"github.com/ajitm722/LazyOS/internal/config"
+	"github.com/ajitm722/LazyOS/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/daemons/osquery"
+	"github.com/ajitm722/LazyOS/internal/logger"
+	"github.com/ajitm722/LazyOS/internal/tui"
 )
 
 var cfgFile string

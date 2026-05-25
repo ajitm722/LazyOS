@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/ajitm722/lazyos/internal/config"
+	"github.com/ajitm722/LazyOS/internal/config"
 	"github.com/charmbracelet/bubbles/key"
 )
 

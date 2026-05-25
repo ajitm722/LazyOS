@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ajitm722/lazyos/internal/config"
-	"github.com/ajitm722/lazyos/internal/daemons"
-	"github.com/ajitm722/lazyos/internal/daemons/mock"
+	"github.com/ajitm722/LazyOS/internal/config"
+	"github.com/ajitm722/LazyOS/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/daemons/mock"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )

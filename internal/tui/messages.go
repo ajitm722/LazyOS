@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"github.com/ajitm722/lazyos/internal/tui/views/querybar"
-	"github.com/ajitm722/lazyos/internal/tui/views/sidebar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/querybar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 )
 
 // RunQueryMsg is a type alias for querybar.RunQueryMsg — it carries the SQL

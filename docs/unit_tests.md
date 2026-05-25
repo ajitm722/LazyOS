@@ -1,8 +1,10 @@
-# Testing Guide
+# Unit Tests
+
+> For integration tests against a live osquery daemon, see [`osquery_integration_test.md`](./osquery_integration_test.md).
 
 ## Overview
 
-The test suite spans four packages:
+The unit test suite spans four packages:
 
 * **`internal/daemons`** — The column-helpers test suite, testing `ExtractColumnNames` and `DeriveColumnsFromSchema` — the domain-level column derivation logic that backend implementations rely on for the 0-row fallback.
 * **`internal/tui`** — The Bubble Tea-based UI layer. Tests are white-box (`package tui`, same directory as the code) so they can access unexported helpers like `defaultAppModel`, `focusQuery`, and `getDefaultBackend` without reflection or exported test hooks.
@@ -253,8 +255,8 @@ The entire test completes in near-zero real time.
 - **`internal/tui/views/results`**: 100.0% statement coverage.
 - **`internal/tui/views/sidebar`**: 100.0% statement coverage.
 
-**Omitted (no unit tests):**
+**Omitted from unit-test coverage (no `_test.go` files):**
 - `cmd/lazyos` — entry point, no logic to test.
 - `internal/config` — types-only package, no logic.
 - `internal/daemons/mock` — test helpers consumed by other tests.
-- `internal/daemons/osquery` — requires live osquery socket; integration test candidate (TODO).
+- `internal/daemons/osquery` — no unit tests (integration-only; see [`osquery_integration_test.md`](./osquery_integration_test.md)).

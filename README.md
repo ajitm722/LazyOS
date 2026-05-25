@@ -27,7 +27,8 @@ For more detailed information about the system architecture and internal working
 - [External Interaction (osquery & Thrift)](./docs/osquery_interaction.md) — how LazyOS communicates with the osquery daemon.
 - [UI and Key Bindings](./docs/ui_and_keys.md) — layout, navigation, and key mapping.
 - [Configuration](./docs/configuration.md) — config file format and available options.
-- [Testing](./docs/testing.md) — test suite organization, mock architecture, and coverage.
+- [Unit Tests](./docs/unit_tests.md) — test suite organization, mock architecture, and coverage.
+- [Integration Tests](./docs/osquery_integration_test.md) — osquery client integration test suite against a live daemon.
 
 ---
 
@@ -98,24 +99,103 @@ This workflow keeps you in the terminal — no context-switching to a browser, n
 
 ---
 
+## Quick Start
+
+```bash
+curl -sL https://raw.githubusercontent.com/ajitm722/LazyOS/main/lazyos-osquery.sh | bash
+```
+
+Downloads everything into `/tmp` — osqueryd, the LazyOS binary, and the sandbox wrapper — and opens the TUI. When you quit, every file and process is wiped. No clone, no install, no traces.
+
+For a persistent setup with caching:
+
+```bash
+git clone https://github.com/ajitm722/LazyOS.git
+cd LazyOS
+make run-sandbox
+```
+
+---
+
 ## Build and Execution
 
 LazyOS provides a `Makefile` that covers building, running, testing, log-watching, and cleanup.
 
 | Target | Purpose |
 |---|---|
-| `make run` | Interactive prompt for all config flags |
-| `make run-with-defaults` | Run immediately with compiled-in defaults |
+| `make run-sandbox` | **Primary entry point.** Downloads osqueryd, builds the binary, and runs inside an ephemeral sandbox |
+| `./lazyos-osquery.sh` | Ephemeral evaluation mode — downloads everything to `/tmp`, runs, and wipes all traces on exit |
+| `make run` | Interactive prompt for all config flags (requires an existing osquery daemon) |
+| `make run-with-defaults` | Run immediately with compiled-in defaults (requires an existing osquery daemon) |
 | `make watch-logs` | Tail and pretty-print the log file via `jq` |
 | `make build` | Build a standalone `lazyos` binary |
 | `make test` | Run all tests (summary) |
 | `make test-force` | Run all tests, bypassing cache |
 | `make test-coverage` | Run tests with per-package coverage report |
 | `make test-coverage-html` | Generate and open HTML coverage report |
-| `make clean` | Remove build artifacts and root `*.log` files |
+| `make test-integration` | Run integration tests (summary) against live osquery daemon |
+| `make test-integration-verbose` | Run integration tests with verbose output |
+| `make clean` | Remove the `lazyos` binary and the entire `./build/` directory (osqueryd is re-downloaded on next `make run-sandbox`) |
 | `make clean-default-logs` | Remove `~/.local/state/lazyos/lazyos.log` |
 
-### Running
+### Running with Sandbox (Primary)
+
+```bash
+make run-sandbox
+```
+
+Downloads an isolated osqueryd (if not already cached in `./build/osquery/`), builds the `lazyos` binary, starts an ephemeral daemon, and launches the TUI — all in one command. The daemon is automatically cleaned up when the application exits.
+
+First run:
+```
+LazyOS requires a local osquery daemon to run the sandbox.
+Do you want to download osquery into ./build/osquery? (y/N): y
+Downloading osquery-5.11.0...
+Locating and moving osqueryd binary...
+Download complete.
+Building lazyos...
+Launching LazyOS in sandbox...
+Starting ephemeral osqueryd...
+Socket ready.
+```
+
+Subsequent runs (osqueryd already cached):
+```
+Sandbox dependency (osqueryd) already exists. Skipping download.
+Building lazyos...
+Launching LazyOS in sandbox...
+Starting ephemeral osqueryd...
+Socket ready.
+```
+
+### Ephemeral Evaluation Mode
+
+```bash
+./lazyos-osquery.sh
+```
+
+Downloads osqueryd, builds the binary, and copies the daemon wrapper — all into a temporary directory under `/tmp`. Everything is wiped on exit. No files or processes are left behind.
+
+```
+======================================================
+ LazyOS (Ephemeral Evaluation Mode)
+======================================================
+This script will download everything into memory/tmp.
+When you close the app, NO binaries, NO daemons, and
+NO logs will be left on your machine.
+======================================================
+[*] Fetching osquery (5.11.0)...
+[*] Fetching LazyOS binary...
+[*] Fetching Daemon Wrapper...
+[*] Ephemeral Sandbox Active: Zero bloat...
+[*] Sandbox completely wiped. Goodbye!
+```
+
+> **Note:** Unlike `make run-sandbox`, this does **not** cache `./build/`. Every run is a fresh ephemeral session.
+
+> **Note:** `make clean` removes `./build/`, so the next `make run-sandbox` will prompt to re-download osqueryd.
+
+### Running with Existing Daemon
 
 ```bash
 make run
@@ -241,13 +321,35 @@ make test-coverage-html
 
 Same output as `test-coverage`, then opens the HTML coverage report in your browser.
 
+### Running Integration Tests
+
+```bash
+make test-integration
+```
+
+```
+Running integration tests...
+✓  internal/daemons/osquery (2.522s)
+
+DONE 96 tests in 2.522s
+Cleaning up sandbox...
+The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it.
+```
+
 ### Cleaning Up
 
 ```bash
 make clean
 ```
 
-Removes the `lazyos` binary from the project root.
+Removes the `lazyos` binary and the entire `./build/` directory (including the cached osqueryd):
+
+```
+Cleaning up build artifacts...
+Removed ./build directory.
+```
+
+The next `make run-sandbox` will prompt to re-download osqueryd.
 
 ```bash
 make clean-default-logs

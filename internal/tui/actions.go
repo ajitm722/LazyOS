@@ -3,7 +3,7 @@ package tui
 import (
 	"log/slog"
 
-	"github.com/ajitm722/lazyos/internal/tui/views/sidebar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

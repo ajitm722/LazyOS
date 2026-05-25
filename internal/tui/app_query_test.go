@@ -8,8 +8,8 @@ import (
 
 	"testing/synctest"
 
-	"github.com/ajitm722/lazyos/internal/daemons"
-	"github.com/ajitm722/lazyos/internal/daemons/mock"
+	"github.com/ajitm722/LazyOS/internal/daemons"
+	"github.com/ajitm722/LazyOS/internal/daemons/mock"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

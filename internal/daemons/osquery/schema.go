@@ -1,6 +1,6 @@
 package osquery
 
-import "github.com/ajitm722/lazyos/internal/daemons"
+import "github.com/ajitm722/LazyOS/internal/daemons"
 
 // CoreTables contains the prefilled catalog of the most useful tables for backend/system observability.
 var CoreTables = []daemons.TableSchema{

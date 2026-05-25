@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/ajitm722/lazyos/internal/tui/views/querybar"
-	"github.com/ajitm722/lazyos/internal/tui/views/results"
-	"github.com/ajitm722/lazyos/internal/tui/views/sidebar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/querybar"
+	"github.com/ajitm722/LazyOS/internal/tui/views/results"
+	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 )
 
 // Layout dimension constants for the three-pane proportional split.
