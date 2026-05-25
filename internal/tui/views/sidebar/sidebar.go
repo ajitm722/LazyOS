@@ -12,6 +12,12 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
+// DelegateRowHeight is the height in terminal rows for each sidebar list
+// item. Five rows provides enough vertical space to display a table name,
+// its description, and a sample of its columns without overwhelming the
+// pane — it's the smallest value that comfortably fits all three lines.
+const delegateRowHeight = 5
+
 // AutofillMsg is emitted when the user presses Enter on a sidebar item. It
 // carries the selected table name and is consumed by AppModel.handleAutofillMsg.
 type AutofillMsg struct {
@@ -76,7 +82,7 @@ func New(backend daemons.Queryer) Model {
 	}
 
 	d := list.NewDefaultDelegate()
-	d.SetHeight(8)
+	d.SetHeight(delegateRowHeight)
 
 	l := list.New(items, customDelegate{d}, 0, 0)
 	l.Title = "Tables"
