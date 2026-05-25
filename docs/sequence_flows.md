@@ -159,7 +159,7 @@ sequenceDiagram
 
     activate Layout
     Layout->>Layout: computePaneBounds(W, H)
-    Note over Layout: mainHeight = max(0, H-helpBarHeight)<br/>leftWidth = max(0, 0.3*W - 4)<br/>leftHeight = max(0, mainH - 4)<br/>viewWidth = max(0, 0.7*W - 4)<br/>viewHeight = max(0, 0.8*mainH - 4)<br/>queryHeight = max(0, 0.2*mainH - 4)
+    Note over Layout: mainHeight = max(0, H-helpBarHeight)<br/>listW = int(0.3*W)<br/>rightW = W - listW<br/>inputH = int(0.2*mainH)<br/>viewH = mainH - inputH<br/>leftWidth = max(0, listW - 4)<br/>leftHeight = max(0, mainH - 4)<br/>viewWidth = max(0, rightW - 4)<br/>viewHeight = max(0, viewH - 4)<br/>queryHeight = max(0, inputH - 4)
 
     Layout->>Sidebar: Update(WindowSizeMsg{leftWidth, leftHeight})
     Sidebar-->>Layout: (sidebar.Model, cmd)

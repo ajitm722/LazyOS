@@ -76,12 +76,18 @@ type paneBounds struct {
 // computePaneBounds derives safe content-area boxes clamped to zero.
 func computePaneBounds(width, height int) paneBounds {
 	mainHeight := max(0, height-helpBarHeight)
+
+	listW := int(float64(width) * sidebarWidthFraction)
+	rightW := width - listW
+	inputH := int(float64(mainHeight) * (1.0 - resultsHeightFraction))
+	viewH := mainHeight - inputH
+
 	return paneBounds{
-		leftWidth:   max(0, int(float64(width)*sidebarWidthFraction)-paneContentInset),
+		leftWidth:   max(0, listW-paneContentInset),
 		leftHeight:  max(0, mainHeight-paneContentInset),
-		viewWidth:   max(0, int(float64(width)*resultsWidthFraction)-paneContentInset),
-		viewHeight:  max(0, int(float64(mainHeight)*resultsHeightFraction)-paneContentInset),
-		queryHeight: max(0, int(float64(mainHeight)*(1.0-resultsHeightFraction))-paneContentInset),
+		viewWidth:   max(0, rightW-paneContentInset),
+		viewHeight:  max(0, viewH-paneContentInset),
+		queryHeight: max(0, inputH-paneContentInset),
 	}
 }
 
@@ -124,13 +130,19 @@ type paneSizes struct {
 // computePaneSizes derives outer pane dimensions (the -2 is the RoundedBorder).
 func computePaneSizes(width, height int) paneSizes {
 	mainHeight := height - helpBarHeight
+
+	listW := int(float64(width) * sidebarWidthFraction)
+	rightW := width - listW
+	inputH := int(float64(mainHeight) * (1.0 - resultsHeightFraction))
+	viewH := mainHeight - inputH
+
 	return paneSizes{
-		listWidth:   int(float64(width)*sidebarWidthFraction) - 2,
+		listWidth:   listW - 2,
 		listHeight:  mainHeight - 2,
-		inputWidth:  int(float64(width)*resultsWidthFraction) - 2,
-		inputHeight: int(float64(mainHeight)*(1.0-resultsHeightFraction)) - 2,
-		viewWidth:   int(float64(width)*resultsWidthFraction) - 2,
-		viewHeight:  int(float64(mainHeight)*resultsHeightFraction) - 2,
+		inputWidth:  rightW - 2,
+		inputHeight: inputH - 2,
+		viewWidth:   rightW - 2,
+		viewHeight:  viewH - 2,
 	}
 }
 
