@@ -118,7 +118,7 @@ func (m AppModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.mode == InsertMode {
 		if msg.Type == tea.KeyEsc {
 			m.mode = NormalMode
-			m.layout.Querybar.Input.Blur()
+			m.layout.Querybar.Blur()
 			slog.Debug("Switched to NORMAL mode")
 			return m, nil
 		}
@@ -149,7 +149,7 @@ func (m AppModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Mode transition: i enters INSERT mode in the query bar.
 	if msg.String() == "i" && m.panes.Current() == PaneQuery {
 		m.mode = InsertMode
-		m.layout.Querybar.Input.Focus()
+		m.layout.Querybar.Focus()
 		slog.Debug("Switched to INSERT mode")
 		return m, nil
 	}
@@ -181,7 +181,7 @@ func (m AppModel) handleAutofillMsg(msg AutofillMsg) (tea.Model, tea.Cmd) {
 	slog.Debug("Focus shifting", "from", m.panes.Current(), "to", PaneQuery)
 	m.panes = m.panes.Set(PaneQuery)
 	m.mode = NormalMode
-	m.layout.Querybar.Input.Blur()
+	m.layout.Querybar.Blur()
 	return m, nil
 }
 
@@ -212,7 +212,7 @@ func (m AppModel) handleQueryResultMsg(msg QueryResultMsg) (tea.Model, tea.Cmd) 
 
 	slog.Debug("Focus shifting", "from", m.panes.Current(), "to", PaneResults)
 	m.panes = m.panes.Set(PaneResults)
-	m.layout.Querybar.Input.Blur()
+	m.layout.Querybar.Blur()
 	return m, nil
 }
 

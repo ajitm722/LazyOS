@@ -193,7 +193,7 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestUpdateQuerybar` | Handles `WindowSizeMsg` (dimension propagation) and key rune input. | Sends `WindowSizeMsg{50, 10}`; asserts `Width() > 0`. Sends key runes; asserts `Value() == "sel"`. |
 | `TestViewQuerybar` | Returns non-empty view string. | Sets value; calls `View()`; asserts non-empty. |
 | `TestRunQueryMsg` | `RunQueryMsg` stores and exposes the SQL field. | Direct field access assertion. |
-| `TestSelectAll` | Ctrl+A selects all text and toggles the `selected` flag. | Sends `KeyCtrlA` on model with content; asserts `selected == true` and nil cmd. |
+| `TestSelectAll` | Ctrl+A toggles the `selected` flag and applies a visual selection style (inverted background/foreground). Model must be active (`Focus()` called). | Sends `KeyCtrlA` on a focused model with content; asserts `selected == true` and nil cmd. |
 | `TestSelectAllThenBackspace` | Select‑all followed by Backspace clears the input. | Ctrl+A → Backspace chain; asserts empty value and nil cmd. |
 | `TestSelectAllThenDelete` | Select‑all followed by Delete clears the input. | Ctrl+A → Delete chain; asserts empty value. |
 | `TestSelectAllThenTypeCharacter` | Select‑all followed by a character replaces the content with that character. | Ctrl+A → `KeyRunes{'X'}`; asserts `Value() == "X"`. |

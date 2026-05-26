@@ -6,10 +6,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Helper that constructs a new model with existing content set.
+// Helper that constructs a new active model with existing content set.
 func modelWithValue(v string) Model {
 	m := New()
 	m.Input.SetValue(v)
+	m.Focus()
 	return m
 }
 

@@ -56,8 +56,8 @@ Contextual keys defer based on which pane holds the active `focus`.
 * **`a` (Table List Focused)**: Autofills the query bar with a `SELECT <columns> FROM <table> LIMIT 10;` query for the selected table. Focus shifts to the query bar in NORMAL mode.
 * **`e` (Query Input Focused)**: Executes the currently populated SQL query. The response is formatted into the Results pane and focus shifts there.
 * **`i` (Query Input Focused, NORMAL mode)**: Enters INSERT mode, allowing text to be typed into the SQL editor. The cursor appears and the mode indicator changes to `-- INSERT --`.
-* **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode, hiding the cursor and restoring command-key behaviour.
-* **Ctrl+A (Query Input Focused, INSERT mode)**: Toggles a "select all" state on the input. When activated, the next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text.
+* **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode, hiding the cursor, restoring command-key behaviour, and clearing any active selection highlight on the query text.
+* **Ctrl+A (Query Input Focused, INSERT mode)**: Toggles a "select all" state on the input. When activated, the entire query text is displayed with inverted foreground/background colors (selection highlight). The next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text and restores the normal text style.
 
 ## Data Rendering Architecture
 

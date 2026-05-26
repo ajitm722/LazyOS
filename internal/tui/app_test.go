@@ -33,7 +33,7 @@ func defaultAppModel() AppModel {
 func focusQuery(m AppModel, sql string) AppModel {
 	m.panes = m.panes.Set(PaneQuery)
 	m.layout.Querybar.Input.SetValue(sql)
-	m.layout.Querybar.Input.Focus()
+	m.layout.Querybar.Focus()
 	return m
 }
 

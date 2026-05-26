@@ -305,7 +305,7 @@ This flow details the second half of the query lifecycle: once the background go
 | Row builder | `internal/tui/views/results/format.go:115` | `buildRows(layout, rowsData)` |
 | Table assembly | `internal/tui/views/results/format.go:138` | `Model.buildTableMode(keys, rowsData)` |
 | View switching | `internal/tui/views/results/format.go:152` | `Model.FormatError(err)` |
-| Focus shift | `internal/tui/app.go:157-159` | `m.panes.Set(PaneResults)`, `Input.Blur()` |
+| Focus shift | `internal/tui/app.go:215` | `m.panes.Set(PaneResults)`, `Querybar.Blur()` |
 | Mode dispatch | `internal/tui/views/results/results.go:92` | `Model.ViewStr()` — selects View or Table based on IsTableMode |
 | Resize handling | `internal/tui/views/results/results.go:77` | `Model.handleWindowResize()` — updates Width/Height/bounds |
 
@@ -375,7 +375,7 @@ sequenceDiagram
 
     Note over Model: Shift focus to results pane
     Model->>Model: m.panes = m.panes.Set(PaneResults)
-    Model->>Model: m.layout.Querybar.Input.Blur()
+    Model->>Model: m.layout.Querybar.Blur()
     Model-->>Runtime: (AppModel, nil)
     deactivate Model
 
@@ -416,7 +416,7 @@ The diagram also shows the two-layer key routing architecture: `handleKeyMsg` fi
 |------|------|-------------------|
 | Cycle action | `internal/tui/actions.go:31` | `FocusNextAction.Apply(m)` / `FocusPrevAction.Apply(m)` |
 | Focus state | `internal/tui/pane.go:12` | `PaneManager` struct |
-| Input focus | `internal/tui/views/querybar/input.go:20` | `querybar.Model.Input.Focus()` / `.Blur()` |
+| Input focus | `internal/tui/views/querybar/input.go:52` | `querybar.Model.Focus()` / `.Blur()` |
 | Render | `internal/tui/app.go:190` | `AppModel.View()` |
 
 ### Diagram
@@ -450,9 +450,9 @@ sequenceDiagram
             Action->>Action: m.panes = m.panes.Next()
             Note over Action: Cycles: PaneQuery -> PaneResults -> PaneSidebar -> PaneQuery
             alt new focus is PaneQuery
-                Action->>Child: Input.Focus()
+                Action->>Child: Focus()
             else any other pane
-                Action->>Child: Input.Blur()
+                Action->>Child: Blur()
             end
             Action-->>Handler: (updated AppModel, nil)
             deactivate Action
