@@ -18,7 +18,7 @@ curl -L -s -f https://pkg.osquery.io/linux/osquery-5.11.0_1.linux_x86_64.tar.gz 
 OSQUERYD=$(find "$DOWNLOAD_DIR" -type f -name "osqueryd" | head -n 1)
 chmod +x "$OSQUERYD"
 
-echo "[*] Fetching LazyOS binary..."
+echo "[*] Fetching LazyOS binary (requires Go 1.21+ installed)..."
 env GO111MODULE=on GOPROXY=direct GOBIN="$DOWNLOAD_DIR" go install github.com/ajitm722/LazyOS/cmd/lazyos@latest
 
 echo "[*] Fetching Daemon Wrapper..."

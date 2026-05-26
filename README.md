@@ -101,6 +101,8 @@ This workflow keeps you in the terminal — no context-switching to a browser, n
 
 ## Quick Start
 
+> **Requires Go 1.21+** — the script below builds the LazyOS binary from source via `go install`.
+
 ```bash
 curl -sL https://raw.githubusercontent.com/ajitm722/LazyOS/main/lazyos-osquery.sh | bash
 ```
