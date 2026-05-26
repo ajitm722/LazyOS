@@ -108,10 +108,11 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 **Default bindings**:
 | Binding | Default key | Action |
 |---------|------------|--------|
-| `toggle_table` | Ctrl+N | `ToggleTableAction` |
-| `focus_next` | Tab | `FocusNextAction` |
-| `focus_prev` | Shift+Tab | `FocusPrevAction` |
-| `execute/autofill` | Ctrl+E | `EnterAction` |
+| `focus_next` | Ctrl+L | `FocusNextAction` |
+| `focus_prev` | Ctrl+H | `FocusPrevAction` |
+| `toggle_table` | `t` | `ToggleTableAction` |
+| `autofill` | `a` | `AutofillAction` |
+| `execute` | `e` | `ExecuteAction` |
 | `quit` | Ctrl+C | `QuitAction` |
 
 ---

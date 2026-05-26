@@ -72,7 +72,10 @@ classDiagram
     class FocusPrevAction {
         +Apply(m AppModel) (AppModel, tea.Cmd)
     }
-    class EnterAction {
+    class AutofillAction {
+        +Apply(m AppModel) (AppModel, tea.Cmd)
+    }
+    class ExecuteAction {
         +Apply(m AppModel) (AppModel, tea.Cmd)
     }
 
@@ -119,7 +122,8 @@ classDiagram
     AppAction <|.. ToggleTableAction : implements
     AppAction <|.. FocusNextAction : implements
     AppAction <|.. FocusPrevAction : implements
-    AppAction <|.. EnterAction : implements
+    AppAction <|.. AutofillAction : implements
+    AppAction <|.. ExecuteAction : implements
     Queryer <|.. OsqueryClient : implements
     Queryer *-- TableSchema 
 ```

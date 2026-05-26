@@ -3,6 +3,8 @@ package tui
 import (
 	"log/slog"
 
+	"github.com/charmbracelet/bubbles/list"
+
 	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -39,9 +41,7 @@ func (a FocusNextAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	oldFocus := m.panes.Current()
 	m.panes = m.panes.Next()
 	slog.Debug("Focused next", "from", oldFocus, "to", m.panes.Current())
-	if m.panes.Current() == PaneQuery {
-		m.layout.Querybar.Input.Focus()
-	} else {
+	if m.panes.Current() != PaneQuery {
 		m.layout.Querybar.Input.Blur()
 	}
 	return m, nil
@@ -55,30 +55,42 @@ func (a FocusPrevAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	oldFocus := m.panes.Current()
 	m.panes = m.panes.Prev()
 	slog.Debug("Focused prev", "from", oldFocus, "to", m.panes.Current())
-	if m.panes.Current() == PaneQuery {
-		m.layout.Querybar.Input.Focus()
-	} else {
+	if m.panes.Current() != PaneQuery {
 		m.layout.Querybar.Input.Blur()
 	}
 	return m, nil
 }
 
-// EnterAction handles the enter key contextually based on the active pane.
-type EnterAction struct{}
+// AutofillAction fills the query bar with a SELECT query for the selected
+// sidebar table. Only active when the sidebar is focused and not in filter mode.
+type AutofillAction struct{}
 
-func (a EnterAction) Apply(m AppModel) (AppModel, tea.Cmd) {
-	switch m.panes.Current() {
-	case PaneSidebar:
-		if i, ok := m.layout.Sidebar.List.SelectedItem().(sidebar.TableItem); ok {
-			slog.Debug("enter key pressed on table via EnterAction", "table", i.Schema.Name)
-			return m, func() tea.Msg { return AutofillMsg{TableName: i.Schema.Name} }
-		}
-	case PaneQuery:
-		v := m.layout.Querybar.Input.Value()
-		if v != "" {
-			slog.Debug("enter key pressed in querybar via EnterAction", "query", v)
-			return m, func() tea.Msg { return RunQueryMsg{SQL: v} }
-		}
+func (a AutofillAction) Apply(m AppModel) (AppModel, tea.Cmd) {
+	if m.panes.Current() != PaneSidebar {
+		return m, nil
+	}
+	if m.layout.Sidebar.List.FilterState() == list.Filtering {
+		return m, nil
+	}
+	if i, ok := m.layout.Sidebar.List.SelectedItem().(sidebar.TableItem); ok {
+		slog.Debug("autofill triggered via AutofillAction", "table", i.Schema.Name)
+		return m, func() tea.Msg { return AutofillMsg{TableName: i.Schema.Name} }
+	}
+	return m, nil
+}
+
+// ExecuteAction runs the SQL in the query bar and shifts focus to results.
+// Only active when the query bar is focused.
+type ExecuteAction struct{}
+
+func (a ExecuteAction) Apply(m AppModel) (AppModel, tea.Cmd) {
+	if m.panes.Current() != PaneQuery {
+		return m, nil
+	}
+	v := m.layout.Querybar.Input.Value()
+	if v != "" {
+		slog.Debug("execute triggered via ExecuteAction", "query", v)
+		return m, func() tea.Msg { return RunQueryMsg{SQL: v} }
 	}
 	return m, nil
 }

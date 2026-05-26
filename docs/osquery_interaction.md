@@ -174,7 +174,8 @@ This flow details the most complex interaction: entering a SQL query, pressing C
 
 | Step | File | Key Function / Type |
 |------|------|-------------------|
-| Enter action | `internal/tui/actions.go:64` | `EnterAction.Apply(m)` |
+| Autofill action | `internal/tui/actions.go:70` | `AutofillAction.Apply(m)` |
+| Execute action | `internal/tui/actions.go:88` | `ExecuteAction.Apply(m)` |
 | Query dispatch | `internal/tui/app.go:136` | `handleRunQueryMsg(msg)` |
 | Column resolution (rows > 0) | `internal/daemons/osquery/client.go:89` | Extract keys from first row's map — preserves computed expressions exactly |
 | Column resolution (rows == 0) | `internal/daemons/columns.go:41` | `DeriveColumnsFromSchema(sql, schema)` — parses SQL for `FROM` table, looks up in schema catalog |

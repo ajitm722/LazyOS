@@ -14,15 +14,12 @@ import (
 // TestKeyBindingOverride exercises the InputHandler key-override mechanism.
 //
 // The test creates an AppModel with custom key bindings:
-//   - ToggleTable remapped to Ctrl+T (default is Ctrl+N).
-//   - FocusNext remapped to Ctrl+N (default is Tab).
+//   - ToggleTable remapped to Ctrl+T (default is t).
+//   - FocusNext remapped to Ctrl+N (default is ctrl+l).
 //
 // It then uses a table-driven approach to verify each key matches the
 // expected action type via reflect.TypeOf, ensuring the ActionRegistry
 // mapping is correct after overrides.
-//
-// A separate subtest asserts that Ctrl+N no longer matches ToggleTable
-// (negative assertion).
 func TestKeyBindingOverride(t *testing.T) {
 	m := NewApp(map[string]daemons.Queryer{"mock": &mock.MockQueryer{}}, config.Keys{
 		ToggleTable: "ctrl+t",
@@ -36,7 +33,7 @@ func TestKeyBindingOverride(t *testing.T) {
 	}{
 		{name: "ctrl+n triggers FocusNext", key: tea.KeyMsg{Type: tea.KeyCtrlN}, want: FocusNextAction{}},
 		{name: "ctrl+t triggers ToggleTable", key: tea.KeyMsg{Type: tea.KeyCtrlT}, want: ToggleTableAction{}},
-		{name: "shift+tab unchanged as FocusPrev", key: tea.KeyMsg{Type: tea.KeyShiftTab}, want: FocusPrevAction{}},
+		{name: "ctrl+h unchanged as FocusPrev", key: tea.KeyMsg{Type: tea.KeyCtrlH}, want: FocusPrevAction{}},
 	}
 
 	for _, tt := range tests {
@@ -52,26 +49,16 @@ func TestKeyBindingOverride(t *testing.T) {
 			t.Errorf("key %s matched no binding", tt.key.String())
 		})
 	}
-
-	t.Run("ctrl+n does not match ToggleTable", func(t *testing.T) {
-		for _, a := range m.input.Actions {
-			if key.Matches(tea.KeyMsg{Type: tea.KeyCtrlN}, a.Binding) {
-				if _, ok := a.Action.(ToggleTableAction); ok {
-					t.Error("ctrl+n should not trigger ToggleTable after override to ctrl+t")
-				}
-			}
-		}
-	})
 }
 
-// TestUnmatchedKey sends a plain 'a' rune key (which has no binding in the
+// TestUnmatchedKey sends a plain 'z' rune key (which has no binding in the
 // ActionRegistry) and asserts that:
 //   - No cmd is returned (the key falls through to routeToFocused).
 //   - The active pane remains PaneSidebar unchanged.
 func TestUnmatchedKey(t *testing.T) {
 	m := defaultAppModel()
 
-	m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
 	if cmd != nil {
 		t.Errorf("expected nil cmd for unmatched key, got non-nil")
 	}

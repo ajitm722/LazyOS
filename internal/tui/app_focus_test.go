@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestFocusNavigation verifies the Tab/Shift+Tab pane-cycling logic.
+// TestFocusNavigation verifies the Ctrl+L/Ctrl+H pane-cycling logic.
 //
 // The test initialises a bare AppModel, then for each table row it sets the
 // starting pane, sends the specified key, and asserts:
@@ -14,8 +14,8 @@ import (
 //   - The query-bar text-input Focused state matches wantFocused
 //     (true only when PaneQuery is active).
 //
-// Tab moves forward through [sidebar → query → results → sidebar].
-// Shift+Tab moves backward through [sidebar → results → query → sidebar].
+// Ctrl+L moves forward through [sidebar → query → results → sidebar].
+// Ctrl+H moves backward through [sidebar → results → query → sidebar].
 func TestFocusNavigation(t *testing.T) {
 	m := defaultAppModel()
 
@@ -26,12 +26,12 @@ func TestFocusNavigation(t *testing.T) {
 		wantPane    PaneID
 		wantFocused bool
 	}{
-		{name: "tab sidebar to query", startPane: PaneSidebar, key: tea.KeyMsg{Type: tea.KeyTab}, wantPane: PaneQuery, wantFocused: true},
-		{name: "tab query to results", startPane: PaneQuery, key: tea.KeyMsg{Type: tea.KeyTab}, wantPane: PaneResults, wantFocused: false},
-		{name: "tab results wrap to sidebar", startPane: PaneResults, key: tea.KeyMsg{Type: tea.KeyTab}, wantPane: PaneSidebar, wantFocused: false},
-		{name: "shift+tab sidebar wrap to results", startPane: PaneSidebar, key: tea.KeyMsg{Type: tea.KeyShiftTab}, wantPane: PaneResults, wantFocused: false},
-		{name: "shift+tab results to query", startPane: PaneResults, key: tea.KeyMsg{Type: tea.KeyShiftTab}, wantPane: PaneQuery, wantFocused: true},
-		{name: "shift+tab query to sidebar", startPane: PaneQuery, key: tea.KeyMsg{Type: tea.KeyShiftTab}, wantPane: PaneSidebar, wantFocused: false},
+		{name: "ctrl+l sidebar to query", startPane: PaneSidebar, key: tea.KeyMsg{Type: tea.KeyCtrlL}, wantPane: PaneQuery, wantFocused: true},
+		{name: "ctrl+l query to results", startPane: PaneQuery, key: tea.KeyMsg{Type: tea.KeyCtrlL}, wantPane: PaneResults, wantFocused: false},
+		{name: "ctrl+l results wrap to sidebar", startPane: PaneResults, key: tea.KeyMsg{Type: tea.KeyCtrlL}, wantPane: PaneSidebar, wantFocused: false},
+		{name: "ctrl+h sidebar wrap to results", startPane: PaneSidebar, key: tea.KeyMsg{Type: tea.KeyCtrlH}, wantPane: PaneResults, wantFocused: false},
+		{name: "ctrl+h results to query", startPane: PaneResults, key: tea.KeyMsg{Type: tea.KeyCtrlH}, wantPane: PaneQuery, wantFocused: true},
+		{name: "ctrl+h query to sidebar", startPane: PaneQuery, key: tea.KeyMsg{Type: tea.KeyCtrlH}, wantPane: PaneSidebar, wantFocused: false},
 	}
 
 	for _, tt := range tests {
@@ -67,8 +67,8 @@ func TestUnhandledMsgFallthrough(t *testing.T) {
 	}
 }
 
-// TestToggleTable sends the toggle-table binding (default Ctrl+N) twice and
-// checks that IsTableMode flips from false → true → false.
+// TestToggleTable sends the toggle-table binding ('t') twice and checks that
+// IsTableMode flips from false → true → false.
 func TestToggleTable(t *testing.T) {
 	m := defaultAppModel()
 
@@ -76,12 +76,12 @@ func TestToggleTable(t *testing.T) {
 		t.Error("expected IsTableMode=false initially")
 	}
 
-	m2, _ := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlN})
+	m2, _ := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 	if !m2.layout.Results.IsTableMode {
 		t.Error("expected IsTableMode=true after first toggle")
 	}
 
-	m3, _ := updateApp(m2, tea.KeyMsg{Type: tea.KeyCtrlN})
+	m3, _ := updateApp(m2, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 	if m3.layout.Results.IsTableMode {
 		t.Error("expected IsTableMode=false after second toggle")
 	}

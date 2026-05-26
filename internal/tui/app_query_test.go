@@ -27,7 +27,7 @@ func TestQueryColumnsFromResponse(t *testing.T) {
 	m := newAppModel(mock)
 	m = focusQuery(m, "SELECT * FROM processes")
 
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	runMsg := cmd()
 	_, cmd = updateApp(m, runMsg)
 	msg := cmd()
@@ -83,7 +83,7 @@ func TestQueryDispatchStandard(t *testing.T) {
 	m := newAppModel(mock)
 	m = focusQuery(m, "SELECT * FROM test")
 
-	m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd after Enter in query pane")
 	}
@@ -139,7 +139,7 @@ func TestQueryTimeout(t *testing.T) {
 		m := newAppModel(mock)
 		m = focusQuery(m, "SELECT * FROM test")
 
-		m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+		m2, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 		if cmd == nil {
 			t.Fatal("expected non-nil cmd after Enter in query pane")
 		}
@@ -203,7 +203,7 @@ func TestQueryErrors(t *testing.T) {
 			m := newAppModel(mock)
 			m = focusQuery(m, "SELECT 1")
 
-			_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+			_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 			runMsg := cmd()
 
 			_, cmd = updateApp(m, runMsg)
@@ -233,7 +233,7 @@ func TestEmptyQueryEnter(t *testing.T) {
 	m := defaultAppModel()
 	m.panes = m.panes.Set(PaneQuery)
 
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	if cmd != nil {
 		t.Error("expected nil cmd when query input is empty")
 	}
@@ -258,9 +258,9 @@ func TestAutofillTrigger(t *testing.T) {
 		t.Fatalf("expected PaneSidebar, got %v", m.panes.Current())
 	}
 
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if cmd == nil {
-		t.Fatal("expected non-nil cmd for Enter on sidebar item")
+		t.Fatal("expected non-nil cmd for autofill on sidebar item")
 	}
 
 	msg := cmd()
@@ -290,8 +290,8 @@ func TestAutofillHandler(t *testing.T) {
 		if m2.panes.Current() != PaneQuery {
 			t.Errorf("expected PaneQuery after autofill, got %v", m2.panes.Current())
 		}
-		if !m2.layout.Querybar.Input.Focused() {
-			t.Error("expected query input focused after autofill")
+		if m2.layout.Querybar.Input.Focused() {
+			t.Error("expected query input blurred after autofill (normal mode)")
 		}
 		want := "SELECT pid, name, path FROM processes LIMIT 10;"
 		if got := m2.layout.Querybar.Input.Value(); got != want {
@@ -310,8 +310,8 @@ func TestAutofillHandler(t *testing.T) {
 		if m2.panes.Current() != PaneQuery {
 			t.Errorf("expected PaneQuery after autofill, got %v", m2.panes.Current())
 		}
-		if !m2.layout.Querybar.Input.Focused() {
-			t.Error("expected query input focused after autofill")
+		if m2.layout.Querybar.Input.Focused() {
+			t.Error("expected query input blurred after autofill (normal mode)")
 		}
 		want := "SELECT * FROM processes LIMIT 10;"
 		if got := m2.layout.Querybar.Input.Value(); got != want {
@@ -332,7 +332,7 @@ func TestQueryZeroRows(t *testing.T) {
 	m = focusQuery(m, "SELECT * FROM empty")
 
 	// Run through the full query pipeline.
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	runMsg := cmd()
 	_, cmd = updateApp(m, runMsg)
 	msg := cmd()
@@ -412,7 +412,7 @@ func TestQueryZeroRowsFallbackNilColumns(t *testing.T) {
 	m := newAppModel(mock)
 	m = focusQuery(m, "SELECT * FROM unknown")
 
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	runMsg := cmd()
 	_, cmd = updateApp(m, runMsg)
 	msg := cmd()
@@ -449,7 +449,7 @@ func TestQueryZeroRowsFromSchema(t *testing.T) {
 	m := newAppModel(mock)
 	m = focusQuery(m, "SELECT * FROM processes")
 
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlE})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
 	runMsg := cmd()
 	_, cmd = updateApp(m, runMsg)
 	msg := cmd()

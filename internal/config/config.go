@@ -10,7 +10,8 @@ type Keys struct {
 	ToggleTable string `mapstructure:"toggle_table"`
 	FocusNext   string `mapstructure:"focus_next"`
 	FocusPrev   string `mapstructure:"focus_prev"`
-	Enter       string `mapstructure:"enter"`
+	Autofill    string `mapstructure:"autofill"`
+	Execute     string `mapstructure:"execute"`
 	Quit        string `mapstructure:"quit"`
 }
 

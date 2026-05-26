@@ -75,9 +75,20 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update delegates to either the viewport or the table depending on
-// IsTableMode.
+// IsTableMode. In line mode j/k are mapped to scroll down/up.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m = m.handleWindowResize(msg)
+
+	if km, ok := msg.(tea.KeyMsg); ok && !m.IsTableMode {
+		switch km.String() {
+		case "j":
+			m.View.LineDown(1)
+			return m, nil
+		case "k":
+			m.View.LineUp(1)
+			return m, nil
+		}
+	}
 
 	var cmd tea.Cmd
 	if m.IsTableMode {

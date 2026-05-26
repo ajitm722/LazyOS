@@ -16,25 +16,48 @@ The interface consists of three interactive panes:
 │ │ users      │ │ name  = nginx                │ │
 │ │            │ │ state = LISTEN               │ │
 │ └────────────┘ └──────────────────────────────┘ │
-│ tab: focus   ^e: exec   ^t: toggle  q: quit     │
+│ -- NORMAL -- j/k: nav t: toggle a: autofill e: execute ^l: next ^h: prev ^c: quit │
 └─────────────────────────────────────────────────┘
 ```
+
+### Modal Editing
+
+LazyOS uses a vim-inspired modal interaction model with two modes:
+
+* **NORMAL mode** (default): Keys trigger navigation and commands (`j`/`k` to move, `a` to autofill, `e` to execute, etc.).
+* **INSERT mode** (query bar only): Keys type into the SQL editor. Press `i` in the query bar to enter INSERT mode; press `Esc` to return to NORMAL.
+
+A mode indicator (`-- NORMAL --` or `-- INSERT --`) is displayed in the bottom-left corner.
 
 ### Global Key Bindings
 
 Global keybindings dictate layout manipulation, lifecycle events, and window management. These keys are defined semantically via `charmbracelet/bubbles/key` and can be remapped utilizing the Viper configuration file.
 
-* **Tab/Shift+Tab (`focus_next`/`focus_prev`)**: Shifts the active `focus` state between the Table List, Query Input, and Results panes. The focused pane is highlighted with a distinct border color. Tab-based focus avoids interfering with letters typed in queries or table-name filters.
-* **Ctrl+N (`toggle_table`)**: Toggles the `isTableMode` boolean. Switches the results display between a vertical key-value line mode and a horizontal, scrollable column table mode.
+* **Ctrl+L (`focus_next`)**: Shifts the active `focus` forward through the panes: Table List → Query Input → Results → Table List.
+* **Ctrl+H (`focus_prev`)**: Shifts the active `focus` backward through the panes.
+* **`t` (`toggle_table`)**: Toggles the `isTableMode` boolean. Switches the results display between a vertical key-value line mode and a horizontal, scrollable column table mode.
+* **`a` (`autofill`)**: In the Table List pane, retrieves the selected table name, constructs a `SELECT <columns> FROM <table> LIMIT 10;` query, populates the Query Input pane, and shifts focus (remaining in NORMAL mode).
+* **`e` (`execute`)**: In the Query Input pane, executes the currently populated SQL query and shifts focus to the Results pane.
 * **Ctrl+C (`quit`)**: Terminates the application cleanly via `tea.Quit`.
+
+### Navigation in NORMAL Mode
+
+In NORMAL mode, each pane responds to `j` and `k` for vertical movement:
+
+* **Table List (sidebar)**: `j`/`k` scroll through the table list. Press `/` to enter filter mode, which lets you type to narrow the list; `Esc` exits filter mode.
+* **Query Input**: `j`/`k` are not applicable; press `i` to enter INSERT mode for editing.
+* **Results (line mode)**: `j`/`k` scroll the viewport up and down.
+* **Results (table mode)**: `j`/`k` move the selection cursor up and down through rows.
 
 ### Contextual Key Bindings
 
 Contextual keys defer based on which pane holds the active `focus`.
 
-* **Ctrl+E (Table List Focused)**: Retrieves the selected table name, constructs a `SELECT * FROM <table> LIMIT 10;` query, populates the Query Input pane, and shifts focus.
-* **Ctrl+E (Query Input Focused)**: Executes the currently populated SQL query via the `osquery` client. Handles errors gracefully and formats the response data into the Results pane.
-* **Ctrl+A (Query Input Focused)**: Toggles a "select all" state on the input. When activated, the next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text. This shortcut is useful after autofilling a table query (via `Ctrl+E` on the sidebar), allowing an immediate overwrite of the autofilled query.
+* **`a` (Table List Focused)**: Autofills the query bar with a `SELECT <columns> FROM <table> LIMIT 10;` query for the selected table. Focus shifts to the query bar in NORMAL mode.
+* **`e` (Query Input Focused)**: Executes the currently populated SQL query. The response is formatted into the Results pane and focus shifts there.
+* **`i` (Query Input Focused, NORMAL mode)**: Enters INSERT mode, allowing text to be typed into the SQL editor. The cursor appears and the mode indicator changes to `-- INSERT --`.
+* **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode, hiding the cursor and restoring command-key behaviour.
+* **Ctrl+A (Query Input Focused, INSERT mode)**: Toggles a "select all" state on the input. When activated, the next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text.
 
 ## Data Rendering Architecture
 

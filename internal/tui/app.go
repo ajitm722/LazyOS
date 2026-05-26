@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/ajitm722/LazyOS/internal/config"
@@ -22,10 +23,19 @@ import (
 	"github.com/ajitm722/LazyOS/internal/tui/views/sidebar"
 )
 
+// Mode represents the current input mode for vim-style interaction.
+type Mode int
+
+const (
+	NormalMode Mode = iota
+	InsertMode
+)
+
 // AppModel is the root Bubble Tea model. It owns the Layout, input routing,
 // pane manager, and backend clients — but delegates all screen math and
 // rendering to the Layout struct.
 type AppModel struct {
+	mode          Mode                       // vim input mode (normal/insert)
 	layout        Layout                     // screen layout and rendering
 	input         InputHandler               // key bindings and action registry
 	panes         PaneManager                // focus order and active pane tracking
@@ -95,17 +105,55 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.routeToFocused(msg)
 }
 
-// handleKeyMsg iterates the ActionRegistry looking for a semantic match. If
-// a binding matches, the corresponding AppAction.Apply is called. Otherwise
-// the message falls through to routeToFocused.
+// handleKeyMsg implements vim-style modal key routing.
+//
+// In INSERT mode control keys (ctrl+l/h/c) still work globally; Esc returns
+// to NORMAL; all other keys route to the focused widget. In NORMAL mode all
+// global actions are matched, then mode transitions (i/Esc) are handled, then
+// remaining keys fall through to routeToFocused.
 func (m AppModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	slog.Debug("Key pressed", "key", msg.String(), "focus", m.panes.Current())
+	slog.Debug("Key pressed", "key", msg.String(), "focus", m.panes.Current(), "mode", m.mode)
+
+	// INSERT mode: control keys still work globally; Esc exits to NORMAL.
+	if m.mode == InsertMode {
+		if msg.Type == tea.KeyEsc {
+			m.mode = NormalMode
+			m.layout.Querybar.Input.Blur()
+			slog.Debug("Switched to NORMAL mode")
+			return m, nil
+		}
+		if msg.Type == tea.KeyCtrlL || msg.Type == tea.KeyCtrlH || msg.Type == tea.KeyCtrlC {
+			for _, mapping := range m.input.Actions {
+				if key.Matches(msg, mapping.Binding) {
+					return mapping.Action.Apply(m)
+				}
+			}
+		}
+		return m.routeToFocused(msg)
+	}
+
+	// NORMAL mode: if the sidebar list is filtering, route keys directly
+	// so /, j, k, a, etc. are consumed by the filter rather than global actions.
+	if m.panes.Current() == PaneSidebar && m.layout.Sidebar.List.FilterState() == list.Filtering {
+		return m.routeToFocused(msg)
+	}
+
+	// Global actions from the registry.
 	for _, mapping := range m.input.Actions {
 		if key.Matches(msg, mapping.Binding) {
 			slog.Debug("Key matched action", "action", fmt.Sprintf("%T", mapping.Action))
 			return mapping.Action.Apply(m)
 		}
 	}
+
+	// Mode transition: i enters INSERT mode in the query bar.
+	if msg.String() == "i" && m.panes.Current() == PaneQuery {
+		m.mode = InsertMode
+		m.layout.Querybar.Input.Focus()
+		slog.Debug("Switched to INSERT mode")
+		return m, nil
+	}
+
 	return m.routeToFocused(msg)
 }
 
@@ -132,7 +180,8 @@ func (m AppModel) handleAutofillMsg(msg AutofillMsg) (tea.Model, tea.Cmd) {
 
 	slog.Debug("Focus shifting", "from", m.panes.Current(), "to", PaneQuery)
 	m.panes = m.panes.Set(PaneQuery)
-	m.layout.Querybar.Input.Focus()
+	m.mode = NormalMode
+	m.layout.Querybar.Input.Blur()
 	return m, nil
 }
 
@@ -203,5 +252,5 @@ func (m AppModel) routeToFocused(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View satisfies tea.Model by delegating to the Layout's composition logic.
 func (m AppModel) View() string {
-	return m.layout.View(m.panes.Current(), m.input)
+	return m.layout.View(m.panes.Current(), m.input, m.mode)
 }

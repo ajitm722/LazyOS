@@ -208,7 +208,7 @@ Keystrokes arrive as `tea.KeyMsg` values and are routed through `handleKeyMsg`, 
 | Key routing | `internal/tui/app.go:94` | `handleKeyMsg(msg)` |
 | Registry iteration | `internal/tui/registry.go:19` | `InputHandler.Actions` (slice) |
 | Action execution | `internal/tui/actions.go:10` | `AppAction.Apply(m)` |
-| Action impls | `internal/tui/actions.go:15-82` | `QuitAction`, `ToggleTableAction`, `FocusNextAction`, `FocusPrevAction`, `EnterAction` |
+| Action impls | `internal/tui/actions.go:15-100` | `QuitAction`, `ToggleTableAction`, `FocusNextAction`, `FocusPrevAction`, `AutofillAction`, `ExecuteAction` |
 | Fallback routing | `internal/tui/app.go:172` | `routeToFocused(msg)` |
 
 ### Diagram
@@ -244,7 +244,7 @@ sequenceDiagram
                 Note over Action: m.layout.Results.IsTableMode = !...
             else FocusNextAction / FocusPrevAction
                 Note over Action: m.panes = m.panes.Next()/Prev()<br/>Focus/Blur m.layout.Querybar.Input
-            else EnterAction
+            else AutofillAction / ExecuteAction
                 Note over Action: Returns closure producing<br/>AutofillMsg or RunQueryMsg
             end
             Action-->>Handler: (updated AppModel, tea.Cmd)

@@ -172,7 +172,7 @@ func renderTooSmallWarning(width, height int) string {
 }
 
 // View composes the three panes and help menu into a single rendered string.
-func (l Layout) View(activeFocus PaneID, keys help.KeyMap) string {
+func (l Layout) View(activeFocus PaneID, keys help.KeyMap, mode Mode) string {
 	if l.tooSmall {
 		return renderTooSmallWarning(l.termWidth, l.termHeight)
 	}
@@ -192,5 +192,14 @@ func (l Layout) View(activeFocus PaneID, keys help.KeyMap) string {
 	mainGrid := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
 	helpMenu := helpStyle.Render(l.Help.View(keys))
 
-	return lipgloss.JoinVertical(lipgloss.Left, mainGrid, helpMenu)
+	modeStr := "NORMAL"
+	if mode == InsertMode {
+		modeStr = "INSERT"
+	}
+	modeIndicator := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(helpTextColor)).
+		Render("-- " + modeStr + " --")
+
+	footer := lipgloss.JoinHorizontal(lipgloss.Left, modeIndicator, helpMenu)
+	return lipgloss.JoinVertical(lipgloss.Left, mainGrid, footer)
 }

@@ -24,23 +24,28 @@ func NewInputHandler(cfg config.Keys) InputHandler {
 	return InputHandler{
 		Actions: []BoundAction{
 			{
-				Binding:         bind("ctrl+n", cfg.ToggleTable, "toggle results"),
-				Action:          ToggleTableAction{},
-				ShowInShortHelp: true,
-			},
-			{
-				Binding:         bind("tab", cfg.FocusNext, "focus next"),
+				Binding:         bind("ctrl+l", cfg.FocusNext, "next pane"),
 				Action:          FocusNextAction{},
 				ShowInShortHelp: true,
 			},
 			{
-				Binding:         bind("shift+tab", cfg.FocusPrev, "focus prev"),
+				Binding:         bind("ctrl+h", cfg.FocusPrev, "prev pane"),
 				Action:          FocusPrevAction{},
 				ShowInShortHelp: true,
 			},
 			{
-				Binding:         bind("ctrl+e", cfg.Enter, "execute/autofill"),
-				Action:          EnterAction{},
+				Binding:         bind("t", cfg.ToggleTable, "toggle table"),
+				Action:          ToggleTableAction{},
+				ShowInShortHelp: true,
+			},
+			{
+				Binding:         bind("a", cfg.Autofill, "autofill"),
+				Action:          AutofillAction{},
+				ShowInShortHelp: true,
+			},
+			{
+				Binding:         bind("e", cfg.Execute, "execute"),
+				Action:          ExecuteAction{},
 				ShowInShortHelp: true,
 			},
 			{

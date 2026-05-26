@@ -92,18 +92,18 @@ func TestLayoutViewRenders(t *testing.T) {
 	m := newAppModel(&mock.MockQueryer{})
 
 	for _, focus := range []PaneID{PaneSidebar, PaneQuery, PaneResults} {
-		view := m.layout.View(focus, m.input)
+		view := m.layout.View(focus, m.input, NormalMode)
 		if view == "" {
 			t.Errorf("expected non-empty view for focus %v", focus)
 		}
 	}
 
 	view := m.View()
-	if !strings.Contains(view, "toggle results") {
+	if !strings.Contains(view, "toggle table") {
 		t.Errorf("expected help text in view, got:\n%s", view)
 	}
-	if !strings.Contains(view, "focus next") {
-		t.Errorf("expected 'focus next' in help")
+	if !strings.Contains(view, "next pane") {
+		t.Errorf("expected 'next pane' in help")
 	}
 }
 
