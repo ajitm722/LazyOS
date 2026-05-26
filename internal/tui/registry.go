@@ -49,9 +49,9 @@ func NewInputHandler(cfg config.Keys) InputHandler {
 				ShowInShortHelp: true,
 			},
 			{
-				Binding:         bind("ctrl+c", cfg.Quit, "quit"),
-				Action:          QuitAction{},
-				ShowInShortHelp: true,
+			Binding:         bind("q", cfg.Quit, "quit"),
+			Action:          QuitAction{},
+			ShowInShortHelp: true,
 			},
 		},
 	}

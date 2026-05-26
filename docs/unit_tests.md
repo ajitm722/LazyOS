@@ -113,7 +113,7 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `toggle_table` | `t` | `ToggleTableAction` |
 | `autofill` | `a` | `AutofillAction` |
 | `execute` | `e` | `ExecuteAction` |
-| `quit` | Ctrl+C | `QuitAction` |
+| `quit` | `q` | `QuitAction` |
 
 ---
 

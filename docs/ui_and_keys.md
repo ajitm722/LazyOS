@@ -38,7 +38,7 @@ Global keybindings dictate layout manipulation, lifecycle events, and window man
 * **`t` (`toggle_table`)**: Toggles the `isTableMode` boolean. Switches the results display between a vertical key-value line mode and a horizontal, scrollable column table mode.
 * **`a` (`autofill`)**: In the Table List pane, retrieves the selected table name, constructs a `SELECT <columns> FROM <table> LIMIT 10;` query, populates the Query Input pane, and shifts focus (remaining in NORMAL mode).
 * **`e` (`execute`)**: In the Query Input pane, executes the currently populated SQL query and shifts focus to the Results pane.
-* **Ctrl+C (`quit`)**: Terminates the application cleanly via `tea.Quit`.
+* **`q` (`quit`)**: Terminates the application cleanly via `tea.Quit`.
 
 ### Navigation in NORMAL Mode
 

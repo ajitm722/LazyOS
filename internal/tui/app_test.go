@@ -62,7 +62,7 @@ func TestAppInit(t *testing.T) {
 // returned command produces tea.QuitMsg when executed.
 func TestQuitAction(t *testing.T) {
 	m := defaultAppModel()
-	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyCtrlC})
+	_, cmd := updateApp(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd for quit")
 	}
