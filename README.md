@@ -147,6 +147,7 @@ make run-sandbox
 Downloads an isolated osqueryd (if not already cached in `./build/osquery/`), builds the `lazyos` binary, starts an ephemeral daemon, and launches the TUI — all in one command. The daemon is automatically cleaned up when the application exits.
 
 First run:
+
 ```
 LazyOS requires a local osquery daemon to run the sandbox.
 Do you want to download osquery into ./build/osquery? (y/N): y
@@ -160,6 +161,7 @@ Socket ready.
 ```
 
 Subsequent runs (osqueryd already cached):
+
 ```
 Sandbox dependency (osqueryd) already exists. Skipping download.
 Building lazyos...
@@ -192,6 +194,8 @@ NO logs will be left on your machine.
 ```
 
 > **Note:** Unlike `make run-sandbox`, this does **not** cache `./build/`. Every run is a fresh ephemeral session.
+>
+> **Note:** `lazyos-osquery.sh` currently works **only on Linux**. The download URL and binary extraction paths are Linux-specific.
 
 > **Note:** `make clean` removes `./build/`, so the next `make run-sandbox` will prompt to re-download osqueryd.
 
