@@ -1,0 +1,5 @@
+region        = "us-east-1"
+instance_type = "t3.micro"
+os            = "ubuntu"              # ubuntu | debian | amazon-linux
+ssh_key_name  = "your-aws-key-name"
+name_prefix   = "lazyos"

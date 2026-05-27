@@ -24,3 +24,15 @@ AGENTS.md
 PROJECT_CONTEXT.md
 build/
 .antigravitycli
+
+# Terraform / OpenTofu
+*.tfstate
+*.tfstate.backup
+.terraform/
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+terraform.rc
+*.tfvars
+!terraform.tfvars.example
