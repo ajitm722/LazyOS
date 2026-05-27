@@ -27,7 +27,7 @@ locals {
 
 data "aws_ami" "selected" {
   most_recent = true
-  owners      = [local.selected_os.owners]
+  owners      = local.selected_os.owners
 
   filter {
     name   = "name"

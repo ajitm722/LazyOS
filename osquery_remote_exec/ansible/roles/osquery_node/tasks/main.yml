@@ -1,0 +1,85 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Update apt cache (fresh instance)
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Ensure gnupg is installed (required by apt_repository)
+  apt:
+    name: gnupg
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Add osquery apt repository key
+  get_url:
+    url: "{{ osquery_key_url }}"
+    dest: "{{ osquery_keyring }}"
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Add osquery apt repository
+  apt_repository:
+    repo: "{{ osquery_repo }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Add osquery yum repository
+  yum_repository:
+    name: "{{ osquery_repo_name }}"
+    description: "{{ osquery_repo_description }}"
+    baseurl: "{{ osquery_repo_baseurl }}"
+    gpgcheck: "{{ osquery_repo_gpgcheck }}"
+    gpgkey: "{{ osquery_repo_gpgkey }}"
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install osquery package
+  package:
+    name: osquery
+    state: present
+
+- name: Write osquery.flags with extensions socket path
+  copy:
+    dest: "{{ osquery_flags_path }}"
+    content: |
+      --disable_extensions=false
+      --extensions_socket={{ osquery_socket_path }}
+    mode: "0644"
+
+- name: Write osqueryd environment file (defines FLAG_FILE, CONFIG_FILE for systemd)
+  copy:
+    dest: "{{ osquery_env_path }}"
+    content: |
+      FLAG_FILE={{ osquery_flags_path }}
+      CONFIG_FILE={{ osquery_config_path }}
+      PIDFILE=/var/osquery/osqueryd.pidfile
+      LOCAL_PIDFILE=/var/osquery/osqueryd.pidfile
+    mode: "0644"
+
+- name: Create systemd drop-in directory
+  file:
+    path: /etc/systemd/system/osqueryd.service.d
+    state: directory
+    mode: "0755"
+
+- name: Set flags via systemd drop-in (ensures worker process inherits them)
+  template:
+    src: socket-override.conf.j2
+    dest: /etc/systemd/system/osqueryd.service.d/socket-override.conf
+    mode: "0644"
+  notify: restart osqueryd
+
+- name: Enable and start osqueryd service
+  systemd:
+    name: osqueryd
+    enabled: yes
+    state: started
+    daemon_reload: yes
+    masked: no
+
+

@@ -1,0 +1,4 @@
+---
+osquery_flags_path: /etc/osquery/osquery.flags
+osquery_socket_path: /var/osquery/osquery.em
+osquery_config_path: /etc/osquery/osquery.conf

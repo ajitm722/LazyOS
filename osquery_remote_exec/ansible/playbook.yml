@@ -1,0 +1,6 @@
+---
+- name: Provision osquery node
+  hosts: lazyos_nodes
+  become: yes
+  roles:
+    - osquery_node

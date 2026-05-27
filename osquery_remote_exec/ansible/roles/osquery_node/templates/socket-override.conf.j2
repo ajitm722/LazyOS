@@ -1,0 +1,9 @@
+[Service]
+ExecStart=
+ExecStart=/opt/osquery/bin/osqueryd \
+  --flagfile {{ osquery_flags_path }} \
+  --config_path {{ osquery_config_path }} \
+  --disable_watchdog \
+  --disable_extensions=false \
+  --extensions_socket={{ osquery_socket_path }}
+ExecStartPost=/bin/bash -c 'sleep 1 && chmod 0777 {{ osquery_socket_path }}'

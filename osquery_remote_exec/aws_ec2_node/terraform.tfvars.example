@@ -1,4 +1,4 @@
-region        = "us-east-1"
+region        = "ap-southeast-2"
 instance_type = "t3.micro"
 os            = "ubuntu"              # ubuntu | debian | amazon-linux
 ssh_key_name  = "your-aws-key-name"

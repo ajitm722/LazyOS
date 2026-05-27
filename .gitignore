@@ -36,3 +36,7 @@ override.tf.json
 terraform.rc
 *.tfvars
 !terraform.tfvars.example
+
+# Ansible
+inventory.ini
+*.retry

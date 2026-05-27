@@ -29,6 +29,7 @@ For more detailed information about the system architecture and internal working
 - [Configuration](./docs/configuration.md) — config file format and available options.
 - [Unit Tests](./docs/unit_tests.md) — test suite organization, mock architecture, and coverage.
 - [Integration Tests](./docs/osquery_integration_test.md) — osquery client integration test suite against a live daemon.
+- [Remote Deployment](./docs/remote_deployment.md) — deploy osqueryd on a remote node and connect LazyOS via SSH socket forwarding, with optional EC2 provisioning via OpenTofu.
 
 ---
 

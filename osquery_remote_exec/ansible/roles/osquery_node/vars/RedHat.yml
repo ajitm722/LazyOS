@@ -1,0 +1,7 @@
+---
+osquery_repo_name: osquery
+osquery_repo_description: osquery official RPM repository
+osquery_repo_baseurl: https://pkg.osquery.io/rpm
+osquery_repo_gpgcheck: yes
+osquery_repo_gpgkey: https://pkg.osquery.io/rpm/pubkey.gpg
+osquery_env_path: /etc/sysconfig/osqueryd

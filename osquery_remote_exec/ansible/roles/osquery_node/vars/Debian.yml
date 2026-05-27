@@ -1,0 +1,5 @@
+---
+osquery_key_url: https://pkg.osquery.io/deb/pubkey.gpg
+osquery_keyring: /etc/apt/keyrings/osquery.gpg
+osquery_repo: deb [arch=amd64 signed-by={{ osquery_keyring }}] https://pkg.osquery.io/deb deb main
+osquery_env_path: /etc/default/osqueryd

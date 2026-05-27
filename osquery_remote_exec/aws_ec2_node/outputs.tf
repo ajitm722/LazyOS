@@ -36,7 +36,7 @@ output "ssh_connection_string" {
 
 output "ssh_tunnel_command" {
   description = "SSH command to forward the osquery socket locally"
-  value       = "ssh -nNT -L /tmp/lazyos_remote.sock:/var/run/osquery/osquery.em ${local.ssh_users[var.os]}@${aws_instance.node.public_ip}"
+  value       = "ssh -fNT -L /tmp/lazyos_remote.sock:/var/osquery/osquery.em -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 ${local.ssh_users[var.os]}@${aws_instance.node.public_ip} -i <your-key.pem>"
 
   depends_on = [aws_instance.node]
 }
