@@ -2,3 +2,8 @@
 osquery_flags_path: /etc/osquery/osquery.flags
 osquery_socket_path: /var/osquery/osquery.em
 osquery_config_path: /etc/osquery/osquery.conf
+
+# aarch64 tarball installation (used when osquery has no apt repo for this arch)
+osquery_aarch64_version: "5.23.0"
+osquery_aarch64_tarball_url: "https://pkg.osquery.io/linux/osquery-{{ osquery_aarch64_version }}_1.linux_aarch64.tar.gz"
+osquery_bin_dir: /opt/osquery/bin

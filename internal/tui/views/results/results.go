@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	initialContent   = "Awaiting Query...\nPress Tab to navigate, Enter to execute." // viewport placeholder before first query
-	tableHeaderLines = 2                                                             // border + column header height subtracted from pane height
+	initialContent   = "Awaiting Query...\nPress ctrl+h, ctrl+l to navigate, a to autofill query from sidebar, i to edit query, esc and e to execute, t to toggle." // viewport placeholder before first query
+	tableHeaderLines = 2                                                                                                                                            // border + column header height subtracted from pane height
 )
 
 var (

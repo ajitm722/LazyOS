@@ -6,27 +6,35 @@
   apt:
     update_cache: yes
     cache_valid_time: 3600
-  when: ansible_os_family == "Debian"
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_architecture != "aarch64"
 
 - name: Ensure gnupg is installed (required by apt_repository)
   apt:
     name: gnupg
     state: present
-  when: ansible_os_family == "Debian"
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_architecture != "aarch64"
 
 - name: Add osquery apt repository key
   get_url:
     url: "{{ osquery_key_url }}"
     dest: "{{ osquery_keyring }}"
     mode: "0644"
-  when: ansible_os_family == "Debian"
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_architecture != "aarch64"
 
 - name: Add osquery apt repository
   apt_repository:
     repo: "{{ osquery_repo }}"
     state: present
     update_cache: yes
-  when: ansible_os_family == "Debian"
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_architecture != "aarch64"
 
 - name: Add osquery yum repository
   yum_repository:
@@ -36,12 +44,76 @@
     gpgcheck: "{{ osquery_repo_gpgcheck }}"
     gpgkey: "{{ osquery_repo_gpgkey }}"
     state: present
-  when: ansible_os_family == "RedHat"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_architecture != "aarch64"
 
-- name: Install osquery package
+- name: Install osquery package (amd64/x86_64)
   package:
     name: osquery
     state: present
+  when: ansible_architecture != "aarch64"
+
+- name: Create osquery directories (aarch64)
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/osquery/bin
+    - /var/osquery
+    - /var/log/osquery
+    - /etc/osquery
+  when: ansible_architecture == "aarch64"
+
+- name: Download osquery tarball (aarch64)
+  get_url:
+    url: "{{ osquery_aarch64_tarball_url }}"
+    dest: /tmp/osquery-aarch64.tar.gz
+    mode: "0644"
+  when: ansible_architecture == "aarch64"
+
+- name: Extract osquery binary (aarch64)
+  unarchive:
+    src: /tmp/osquery-aarch64.tar.gz
+    dest: /
+    remote_src: yes
+    extra_opts:
+      - --strip-components=0
+  when: ansible_architecture == "aarch64"
+
+- name: Create osqueryd systemd service unit (aarch64)
+  copy:
+    dest: /lib/systemd/system/osqueryd.service
+    content: |
+      [Unit]
+      Description=osquery Daemon
+      Documentation=https://osquery.io
+      After=network.target
+
+      [Service]
+      Type=simple
+      EnvironmentFile=-/etc/default/osqueryd
+      ExecStart=/opt/osquery/bin/osqueryd --flagfile ${FLAG_FILE} --config_path ${CONFIG_FILE}
+      KillMode=process
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+  when: ansible_architecture == "aarch64"
+
+- name: Ensure default osquery config exists
+  copy:
+    dest: "{{ osquery_config_path }}"
+    content: |
+      {
+        "options": {},
+        "schedule": {},
+        "packs": {}
+      }
+    mode: "0644"
+  when: ansible_architecture == "aarch64"
 
 - name: Write osquery.flags with extensions socket path
   copy:
@@ -81,5 +153,9 @@
     state: started
     daemon_reload: yes
     masked: no
+  register: osqueryd_start
+  until: osqueryd_start is success
+  retries: 3
+  delay: 3
 
 

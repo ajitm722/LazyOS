@@ -11,7 +11,7 @@ LazyOS communicates with osqueryd over a local UNIX socket. Rather than modifyin
 The provisioning pipeline has three stages:
 
 1. **OpenTofu** (optional) — provisions an EC2 instance and writes a dynamic Ansible inventory
-2. **Ansible** — installs osqueryd, configures the socket path with a systemd drop-in, and starts the service
+2. **Ansible** — auto-detects the CPU architecture, installs osqueryd (via apt/yum on x86_64, or from the official aarch64 tarball on ARM), configures the socket path with a systemd drop-in, and starts the service
 3. **SSH Tunnel** — forwards the remote socket to a local file path so LazyOS can use it
 
 ### osqueryd Daemon Quirks
@@ -144,6 +144,9 @@ ansible-playbook -i inventory.ini playbook.yml -u ubuntu --key-file ~/.ssh/lazyo
 ansible-playbook -i inventory.ini playbook.yml -u <ssh-user> --key-file ~/.ssh/your-key
 ```
 
+![Ansible playbook execution](../assets/ansi_script_exec.png)
+*Successful execution of the Ansible playbook, automatically configuring and starting osqueryd on the remote node.*
+
 The playbook performs the following steps:
 
 1. **Detects the OS family** (`Debian` for Ubuntu/Debian, `RedHat` for Amazon Linux)
@@ -238,6 +241,21 @@ go run ./cmd/lazyos --osquery-socket /tmp/lazyos_remote.sock
 ```
 
 LazyOS is completely unaware that the socket is tunneled across a network. It opens, reads, and writes to the local file path just as it would with a local osqueryd. SSH handles all encryption, transport, and forwarding transparently.
+
+Once connected, execute queries against the remote host directly from the TUI.
+
+This works on any Linux machine with SSH access. The role auto-detects the CPU architecture and falls back to a tarball installation when no osquery apt repository is available for that architecture:
+
+![SSH into a Raspberry Pi 5 running Ubuntu 24.04](../assets/raspberrypi5_ssh.png)
+*SSH connectivity to a Raspberry Pi 5 — the role installs osqueryd from the official aarch64 tarball when no apt repo exists for that platform.*
+
+Once the instance is reachable, an AI agent like [opencode](https://opencode.ai) can generate osquery SQL tailored to your EC2 infrastructure. Describe what you need in plain English:
+
+![Asking opencode about EC2 instance metadata](../assets/aws_ec2_AIagent_query.png)
+*Prompting an AI agent with a natural-language request about the provisioned AWS EC2 instance.*
+
+![opencode generates the EC2 query](../assets/aws_ec2_AIagent_response.png)
+*The agent responds with the osquery SQL — paste it directly into LazyOS to execute against the remote node.*
 
 ---
 
