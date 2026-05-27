@@ -1,4 +1,4 @@
-// Package sidebar provides the osquery table list pane backed by Bubble
+// Package sidebar provides the table list pane backed by Bubble
 // Tea's list.Model.
 package sidebar
 
@@ -35,7 +35,7 @@ func (i TableItem) Description() string {
 }
 func (i TableItem) FilterValue() string { return i.Schema.Name }
 
-// Model wraps a list.Model to display osquery table names.
+// Model wraps a list.Model to display table names.
 type Model struct {
 	List list.Model // the Bubble Tea list widget
 }

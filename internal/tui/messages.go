@@ -13,7 +13,7 @@ type RunQueryMsg = querybar.RunQueryMsg
 // table name and is emitted when Enter is pressed in the sidebar list.
 type AutofillMsg = sidebar.AutofillMsg
 
-// QueryResultMsg carries the row data returned by a successful osquery call.
+// QueryResultMsg carries the row data returned by a successful call.
 // Columns is populated from the first row's keys when rows are non-empty;
 // it may be set explicitly when rows are empty so the UI can show column
 // headers in table mode.
@@ -22,7 +22,7 @@ type QueryResultMsg struct {
 	Columns []string
 }
 
-// QueryErrorMsg carries the error from a failed osquery call.
+// QueryErrorMsg carries the error from a failed call.
 type QueryErrorMsg struct {
 	Err error
 }

@@ -1,5 +1,5 @@
 // Package main implements the Cobra command that bootstraps the entire
-// application: reading config, connecting to osquery, and launching the TUI.
+// application: reading config, connecting to query daemon, and launching the TUI.
 package main
 
 import (
