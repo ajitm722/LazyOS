@@ -1,3 +1,6 @@
+// Package daemons defines the Queryer interface — the single abstraction
+// that every backend data source must implement. It also provides shared error
+// sentinels and schema utilities consumed by the TUI and caching layers.
 package daemons
 
 import (

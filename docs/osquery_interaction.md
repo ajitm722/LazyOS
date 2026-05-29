@@ -16,16 +16,21 @@ LazyOS interacts with osquery using the `osquery-go` library. Instead of shellin
 sequenceDiagram
     participant User as User
     participant LazyOS as LazyOS TUI App
+    participant Cache as CachedQueryer + SQLite
     participant Socket as Unix Socket (/tmp/osquery.em)
     participant Osquery as osquery Daemon
 
-    User->>LazyOS: Input (Keystrokes: Space, Ctrl+E, n, Ctrl+C)
+    User->>LazyOS: Input (Keystrokes)
     LazyOS->>LazyOS: Process Input & Update State
-    LazyOS->>Socket: Dispatch SQL Query (Thrift RPC)
+    LazyOS->>Cache: e → Query (local cache, lazy-load if needed)
+    Cache-->>LazyOS: Instant result
+    LazyOS->>Cache: E → QuerySource (live source, refresh cache)
+    Cache->>Socket: Dispatch SQL Query (Thrift RPC)
     Socket->>Osquery: Deliver Query
     Osquery->>Osquery: Execute SQL on Host OS
     Osquery-->>Socket: Return Query Results
-    Socket-->>LazyOS: Deliver Results
+    Socket-->>Cache: Deliver Results
+    Cache-->>LazyOS: Synced to local store
     LazyOS->>User: Render Updated UI Pane
 ```
 
@@ -121,143 +126,161 @@ While both Thrift and gRPC are RPC frameworks used for inter-process communicati
 
 ## Data Flow
 
-### Schema Validation
-
-The `CoreTables` catalog in `internal/daemons/osquery/schema.go` is validated against the live daemon in the integration test suite. Every declared column is checked via `PRAGMA table_info` to ensure it exists in the actual osquery schema, and every table is verified to be queryable with `SELECT COUNT(*)`. See `docs/osquery_integration_test.md` for details.
-
 ### Column Resolution
 
 Column names are resolved from the osquery response data when rows are present, with a schema fallback for empty results:
 
 1. **Response-derived (rows > 0)**: Column names are extracted from the first row's map keys. This preserves computed expressions like `size / 1024 AS mb` and reflects exactly what the SELECT clause requested — no extra schema columns are injected.
-2. **Schema fallback (rows == 0)**: When osquery returns zero rows, column names are derived from `CoreTables` in `internal/daemons/osquery/schema.go` (e.g., `"pid, name, path, cmdline, state"`) via `DeriveColumnsFromSchema`, ensuring the TUI can render column headers even with no data.
+2. **Schema fallback (rows == 0)**: When osquery returns zero rows, column names are derived from the schema catalog in `internal/daemons/osqueryd/*/schema.go` via `DeriveColumnsFromSchema`, ensuring the TUI can render column headers even with no data.
 3. **No columns**: If both the response and the schema catalog are empty, nil columns are returned and the TUI renders a headerless "0 rows returned." view.
 
-```mermaid
-sequenceDiagram
-    participant App as LazyOS (Go)
-    participant Schema as CoreTables (schema.go)
-    participant Client as Client.Query
-    participant Thrift as Thrift RPC Layer
-    participant Daemon as osqueryd (C++)
-    
-    alt rows > 0
-        App->>Client: Query("SELECT pid, name FROM processes")
-        Client->>Thrift: executeThriftQuery(sql)
-        Thrift->>Daemon: Send over Unix Domain Socket
-        Daemon->>Daemon: Executes SQL against SQLite virtual tables
-        Daemon->>Thrift: Returns raw row data (map[string]string)
-        Thrift->>Client: []map[string]string
-        Client->>Client: Extract column keys from first row
-        Note over Client: Columns match SELECT expression names exactly
-        Client-->>App: (rows, ["pid", "name"], nil)
-    else rows == 0
-        App->>Client: Query("SELECT * FROM processes WHERE 1=0")
-        Client->>Thrift: executeThriftQuery(sql)
-        Thrift->>Daemon: Send over Unix Domain Socket
-        Daemon->>Daemon: Executes SQL against SQLite virtual tables
-        Daemon->>Thrift: Returns empty result
-        Thrift->>Client: []map[string]string{}
-        Client->>Schema: DeriveColumnsFromSchema(sql, CoreTables)
-        Schema-->>Client: ["pid", "name", "path", "cmdline", "state"]
-        Note over Client: Schema columns used so TUI can render headers
-        Client-->>App: ([], ["pid", "name", "path", "cmdline", "state"], nil)
-    end
-```
-
----
-
-## Asynchronous Query Execution
-
-This flow details the most complex interaction: entering a SQL query, pressing Ctrl+E, and watching results appear. The query is dispatched to a background goroutine to keep the UI responsive.
-
-### Source Files
-
-| Step | File | Key Function / Type |
-|------|------|-------------------|
-| Autofill action | `internal/tui/actions.go:70` | `AutofillAction.Apply(m)` |
-| Execute action | `internal/tui/actions.go:88` | `ExecuteAction.Apply(m)` |
-| Query dispatch | `internal/tui/app.go:136` | `handleRunQueryMsg(msg)` |
-| Column resolution (rows > 0) | `internal/daemons/osquery/client.go:89` | Extract keys from first row's map — preserves computed expressions exactly |
-| Column resolution (rows == 0) | `internal/daemons/columns.go:41` | `DeriveColumnsFromSchema(sql, schema)` — parses SQL for `FROM` table, looks up in schema catalog |
-| osquery RPC | `internal/daemons/osquery/client.go:38` | `Client.executeThriftQuery(sql)` — returns raw rows only (no columns) |
-| osquery Query | `internal/daemons/osquery/client.go:51` | `Client.Query(ctx, sql)` — calls `executeThriftQuery`, then resolves columns from response (rows > 0) or schema (rows == 0) |
-| Result message | `internal/tui/messages.go:17` | `QueryResultMsg{Rows, Columns}` |
-| Error message | `internal/tui/messages.go:22` | `QueryErrorMsg{Err}` |
-| Result formatting | `internal/tui/app.go:149` | `handleQueryResultMsg(msg)` |
-| Error formatting | `internal/tui/app.go:165` | `handleQueryErrorMsg(msg)` |
-| Data rendering | `internal/tui/views/results/format.go:23` | `results.FormatData(rowsData, columns)` |
-| Error rendering | `internal/tui/views/results/format.go:152` | `results.FormatError(err)` |
-
-### Diagram
+### Cached Query Execution
 
 ```mermaid
 sequenceDiagram
     participant User as User
     participant Runtime as Bubble Tea
     participant Model as AppModel
-    participant Action as internal/tui/actions.go (EnterAction)
-    participant Client as daemons/osquery/client.go
-    participant Schema as CoreTables (schema.go)
-    participant Daemon as osquery Daemon
-    participant Results as views/results/format.go
+    participant Action as internal/tui/actions.go
+    participant Cache as internal/cache/queryer.go (CachedQueryer)
+    participant Store as internal/store/sqlite (SQLiteStore)
+    participant Client as internal/daemons/osqueryd/client.go
+    participant Daemon as osqueryd (C++)
 
-    User->>Runtime: Press 'Ctrl+E' (focus is on querybar)
-    Runtime->>Model: Update(tea.KeyMsg("ctrl+e"))
+    User->>Runtime: Press 'e'
+    Runtime->>Model: Update(tea.KeyMsg("e"))
 
-    Model->>Action: Apply(m) (matched via InputHandler)
+    Model->>Action: ExecuteAction.Apply(m)
+    Action-->>Model: (m, cmd → RunQueryMsg{SQL})
 
-    activate Action
-    Action->>Action: switch m.panes.Current()
-    Note over Action: PaneQuery branch
-    Action->>Action: v := m.layout.Querybar.Input.Value()
-    alt Value is non-empty
-        Action-->>Model: (m, func() tea.Msg { return RunQueryMsg{SQL: v} })
-        Note over Action: Returns unchanged model + closure —<br/>does NOT call handleRunQueryMsg directly
-    else Value is empty
-        Action-->>Model: (m, nil)
-    end
-    deactivate Action
+    Runtime->>Model: Update(RunQueryMsg{SQL})
 
-    Note over Model, Runtime: Bubble Tea receives (AppModel, tea.Cmd)<br/>If tea.Cmd is non-nil, Runtime executes the closure
+    Model->>Cache: Query(ctx, sql)
+    activate Cache
 
-    alt tea.Cmd is non-nil
-        Model-->>Runtime: (AppModel, tea.Cmd)
-        Runtime->>Runtime: closure() returns RunQueryMsg{SQL: v}
-        Runtime->>Model: Update(RunQueryMsg)
-
-        Model->>Model: handleRunQueryMsg(msg)
-        activate Model
-        Note over Model: sql := msg.SQL<br/>ctx := logger.WithLogger(context.Background(), slog.Default())
-
-        par Run in background goroutine
-            Model->>Client: go clients["osquery"].Query(ctx, sql)
-            activate Client
-
-            Client->>Daemon: executeThriftQuery(sql) — Thrift RPC
-            Daemon-->>Client: Raw rows ([]map[string]string)
-
-            alt rows > 0
-                Note over Client: Extract column keys from first row<br/>(preserves computed expressions, aliases)
-                Client-->>Model: return QueryResultMsg{Rows: rows, Columns: first-row keys}
-            else rows == 0
-                Client->>Schema: DeriveColumnsFromSchema(sql, CoreTables)
-                Schema-->>Client: ["pid", "name", "path", "cmdline", "state", ...]
-                Client-->>Model: return QueryResultMsg{Rows: [], Columns: schemaCols}
-            else Thrift error or timeout
-                Client-->>Model: return QueryErrorMsg{Err: err}
-            end
-            deactivate Client
-        end
-        deactivate Model
-
-        Note over Runtime: Runtime now routes the returned Msg — see "Query Result Generation Sequence Diagram"
+    Cache->>Store: HasTable(tableName)
+    alt Table missing (first access)
+        Store-->>Cache: false
+        Cache->>Cache: fetchTable(ctx, tableName)
+        Cache->>Client: upstream.Query(ctx, "SELECT * FROM table")
+        Client->>Daemon: Thrift RPC
+        Daemon-->>Client: rows, columns
+        Client-->>Cache: (rows, columns, nil)
+        Cache->>Store: SyncTable(name, cols, rows)
+        Store-->>Cache: nil
+    else Table cached
+        Store-->>Cache: true
     end
 
+    Cache->>Store: Query(ctx, sql)
+    Store-->>Cache: results
+    Cache-->>Model: QueryResultMsg{Rows, Columns}
+    deactivate Cache
+
+    Model->>Model: handleQueryResultMsg → format data
     Model-->>Runtime: (AppModel, nil)
-
-    Runtime->>Model: View()
-    Model-->>Runtime: Rendered UI with query results
-    Runtime->>User: Draw terminal screen
+    Runtime->>Runtime: View() → render UI
 ```
 
+### Source Query Execution
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Runtime as Bubble Tea
+    participant Model as AppModel
+    participant Cache as internal/cache/queryer.go (CachedQueryer)
+    participant Client as internal/daemons/osqueryd/client.go
+    participant Daemon as osqueryd (C++)
+
+    User->>Runtime: Press 'E'
+    Runtime->>Model: Update(tea.KeyMsg("E"))
+
+    Model->>Model: handleRunSourceQueryMsg
+    Model->>Cache: QuerySource(ctx, sql)
+    activate Cache
+
+    Cache->>Client: upstream.Query(ctx, "SELECT * FROM table")
+    Client->>Daemon: Thrift RPC
+    Daemon-->>Client: rows, columns
+    Client-->>Cache: (rows, columns, nil)
+
+    Cache->>Cache: store.SyncTable(name, cols, rows)
+    Cache->>Cache: store.Query(ctx, sql)
+    Cache-->>Model: QueryResultMsg{Rows, Columns}
+    deactivate Cache
+
+    Model->>Runtime: (AppModel, nil)
+```
+
+## Timeout Handling
+
+The `executeThriftQuery` method in `internal/daemons/osqueryd/client.go` passes the deadline-bearing context through to the osquery-go client via `QueryRowsContext` instead of `Query`. This ensures the osquery-go socket locker uses its `MaxWaitTime` (set to match the configured query timeout) rather than falling back to its very short internal default when multiple goroutines contend for the shared Unix socket.
+
+## cloudquery: Cloud Resource Instrumentation
+
+cloudquery is an osquery extension that adds cloud provider telemetry tables to the osquery schema. It is maintained as a separate project at [ajitm722/cloudquery](https://github.com/ajitm722/cloudquery) and runs alongside osqueryd to expose AWS, GCP, and Azure resources as queryable SQL tables.
+
+### Extension Architecture
+
+cloudquery registers itself with osqueryd as an extension plugin. When osqueryd receives a query referencing a cloud table (e.g., `aws_ec2_instance`), it delegates execution to the cloudquery extension process over the Thrift extension socket. The extension authenticates against the configured cloud provider APIs, fetches live resource data, and returns it to osqueryd as standard query result rows.
+
+```mermaid
+sequenceDiagram
+    participant LazyOS as LazyOS TUI
+    participant osqueryd as osquery Daemon
+    participant cloudquery as cloudquery Extension
+    participant AWS as AWS API
+    participant GCP as GCP API
+    participant Azure as Azure API
+
+    LazyOS->>osqueryd: Query("SELECT * FROM aws_ec2_instance")
+    osqueryd->>osqueryd: Check table registry → aws_ec2_instance
+    Note over osqueryd: Table registered by cloudquery extension
+    osqueryd->>cloudquery: Thrift Extension RPC → generate()
+    cloudquery->>AWS: SDK API calls (DescribeInstances)
+    AWS-->>cloudquery: EC2 instance data
+    cloudquery-->>osqueryd: ExtensionResponse {status, rows}
+    osqueryd-->>LazyOS: QueryResultMsg {rows, columns}
+```
+
+### Supported Cloud Providers
+
+| Provider | Namespace | Example Tables |
+|---|---|---|
+| AWS | `aws_*` | `aws_ec2_instance`, `aws_s3_bucket`, `aws_iam_user`, `aws_rds_instance`, `aws_ecs_cluster` |
+| GCP | `gcp_*` | `gcp_compute_instance`, `gcp_compute_network`, `gcp_storage_bucket` |
+| Azure | `azure_*` | `azure_compute_vm`, `azure_storage_account`, `azure_network_vnet` |
+
+Full table catalogs are maintained at:
+- [extension/aws/tables.md](https://github.com/ajitm722/cloudquery/blob/master/extension/aws/tables.md)
+- [extension/gcp/tables.md](https://github.com/ajitm722/cloudquery/blob/master/extension/gcp/tables.md)
+- [extension/azure/tables.md](https://github.com/ajitm722/cloudquery/blob/master/extension/azure/tables.md)
+
+### Configuration
+
+cloudquery reads its configuration from a JSON file (`extension_config.json`), which specifies:
+
+- **Cloud accounts**: One or more accounts per provider with credentials, regions, and optional role assumptions.
+- **Logging**: Log file path and verbosity level.
+- **Provider-specific settings**: Request rate limits, API endpoint overrides, and cache TTLs.
+
+Credentials are passed as file paths within this config:
+- **AWS**: A shared credentials file (`~/.aws/credentials`) with a named profile.
+- **GCP**: A service account JSON key file.
+- **Azure**: An auth file containing service principal credentials, plus `subscriptionId` and `tenantId`.
+
+### Deployment with osqueryd
+
+cloudquery is deployed as a compiled Go binary (`cloudquery.ext`) that osqueryd loads at startup via its extension autoload mechanism:
+
+1. **Build and install**: `make && sudo make install` places the binary at `/usr/local/bin/cloudquery.ext`.
+2. **Register with osqueryd**: Add `/usr/local/bin/cloudquery.ext` to `/etc/osquery/extensions.load`.
+3. **Enable autoload**: Ensure `--extensions_autoload=/etc/osquery/extensions.load` is present in osqueryd flags.
+4. **Restart osqueryd**: `sudo service osqueryd restart`.
+
+### Integration with LazyOS
+
+LazyOS treats cloudquery tables identically to native osquery tables. The `aws` backend in LazyOS's schema catalog (`internal/daemons/osqueryd/aws/schema.go`) enumerates the AWS tables exposed by cloudquery. When the user selects the `aws` backend (via `B` keybinding or `--backend aws` flag), the sidebar populates with these tables and queries are routed to the same osqueryd socket that cloudquery extends.
+
+The caching layer (`internal/cache/`) applies uniformly across all backends: both kernel and cloud tables benefit from lazy-loaded SQLite persistence. Source queries (`E`) refresh cloud tables from the live cloud APIs, while cached queries (`e`) serve data from the local store instantly.

@@ -1,4 +1,4 @@
-.PHONY: help build run run-with-defaults run-sandbox-all test test-verbose test-force test-integration test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
+.PHONY: help build run run-with-defaults run-sandbox-all test test-verbose test-force test-integration test-integration-sqlite test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
 
 # Default binary name
 BINARY_NAME=lazyos
@@ -49,6 +49,10 @@ test-integration: setup-sandbox ## Run integration tests (summary) against a liv
 	@echo "Running integration tests..."
 	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format pkgname -- -tags=integration ./internal/daemons/osqueryd/...
 	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
+
+test-integration-sqlite: ## Run SQLite store integration tests
+	@echo "Running SQLite integration tests..."
+	@gotestsum --format pkgname -- -tags=integration ./internal/store/sqlite/...
 
 test-integration-verbose: setup-sandbox ## Run integration tests with verbose output against a live, ephemeral osquery daemon
 	@echo "Running integration tests (verbose)..."
@@ -113,6 +117,7 @@ test-coverage: ## Run tests and display coverage in CLI (only packages with test
 	@echo "Running tests with coverage..."
 	@echo ""
 	@echo "  Included (unit tests exist):"
+	@echo "    - internal/cache"
 	@echo "    - internal/daemons"
 	@echo "    - internal/logger         (fast, isolated integration — t.TempDir() / t.Setenv())"
 	@echo "    - internal/tui"
@@ -122,9 +127,12 @@ test-coverage: ## Run tests and display coverage in CLI (only packages with test
 	@echo ""
 	@echo "  Omitted (no unit tests):"
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
-	@echo "    - internal/config         (types-only package, no logic)"
+	@echo "    - internal/config         (types-only, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osqueryd    (requires live osquery socket; run via 'make test-integration')"
+	@echo "    - internal/daemons/osqueryd    (requires live osquery socket)"
+	@echo "    - internal/daemons/osqueryd/aws   (requires live osquery socket)"
+	@echo "    - internal/daemons/osqueryd/kernel (requires live osquery socket)"
+	@echo "    - internal/store/sqlite   (requires -tags=integration; run 'make test-integration-sqlite')"
 	@echo ""
 	@gotestsum --format pkgname -- -cover $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 
@@ -132,6 +140,7 @@ test-coverage-html: ## Run tests and open HTML coverage report in browser (only 
 	@echo "Generating HTML coverage report..."
 	@echo ""
 	@echo "  Included (unit tests exist):"
+	@echo "    - internal/cache"
 	@echo "    - internal/daemons"
 	@echo "    - internal/logger         (fast, isolated integration — t.TempDir() / t.Setenv())"
 	@echo "    - internal/tui"
@@ -141,10 +150,12 @@ test-coverage-html: ## Run tests and open HTML coverage report in browser (only 
 	@echo ""
 	@echo "  Omitted (no unit tests):"
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
-	@echo "    - internal/config         (types-only package, no logic)"
+	@echo "    - internal/config         (types-only, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osqueryd    (requires live osquery socket; run via 'make test-integration')"
-	@echo ""
+	@echo "    - internal/daemons/osqueryd    (requires live osquery socket)"
+	@echo "    - internal/daemons/osqueryd/aws   (requires live osquery socket)"
+	@echo "    - internal/daemons/osqueryd/kernel (requires live osquery socket)"
+	@echo "    - internal/store/sqlite   (requires -tags=integration; run 'make test-integration-sqlite')"
 	@gotestsum --format pkgname -- -coverprofile=coverage.out $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 	@go tool cover -html=coverage.out
 

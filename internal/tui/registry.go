@@ -49,8 +49,13 @@ func NewInputHandler(cfg config.Keys) InputHandler {
 				ShowInShortHelp: true,
 			},
 			{
-				Binding:         bind("e", cfg.Execute, "execute"),
+				Binding:         bind("e", cfg.Execute, "exec cache"),
 				Action:          ExecuteAction{},
+				ShowInShortHelp: true,
+			},
+			{
+				Binding:         bind("E", cfg.ExecuteSource, "exec source"),
+				Action:          ExecuteSourceAction{},
 				ShowInShortHelp: true,
 			},
 			{

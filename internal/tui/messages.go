@@ -6,8 +6,16 @@ import (
 )
 
 // RunQueryMsg is a type alias for querybar.RunQueryMsg — it carries the SQL
-// string to execute and is emitted when Enter is pressed in the input pane.
+// string to execute from the local cache and is emitted when Enter is pressed
+// in the input pane.
 type RunQueryMsg = querybar.RunQueryMsg
+
+// RunSourceQueryMsg carries the SQL string to execute against the upstream
+// source, bypassing the local cache, and is emitted when E is pressed in the
+// input pane.
+type RunSourceQueryMsg struct {
+	SQL string
+}
 
 // AutofillMsg is a type alias for sidebar.AutofillMsg — it carries the selected
 // table name and is emitted when Enter is pressed in the sidebar list.

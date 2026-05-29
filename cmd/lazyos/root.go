@@ -1,5 +1,6 @@
 // Package main implements the Cobra command that bootstraps the entire
-// application: reading config, connecting to query daemon, and launching the TUI.
+// application: reading config, connecting to backend data sources, and
+// launching the TUI.
 package main
 
 import (
@@ -14,11 +15,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/ajitm722/LazyOS/internal/cache"
 	"github.com/ajitm722/LazyOS/internal/config"
 	"github.com/ajitm722/LazyOS/internal/daemons"
 	"github.com/ajitm722/LazyOS/internal/daemons/osqueryd/aws"
 	"github.com/ajitm722/LazyOS/internal/daemons/osqueryd/kernel"
 	"github.com/ajitm722/LazyOS/internal/logger"
+	"github.com/ajitm722/LazyOS/internal/store/sqlite"
 	"github.com/ajitm722/LazyOS/internal/tui"
 )
 
@@ -86,7 +89,28 @@ func runApp(ctx context.Context, cfg config.Config) error {
 		}
 	}()
 
-	// 3. Start Application
+	// 3. Initialize persistent cache
+	dbPath := cfg.CacheDBPath
+	if dbPath == "" {
+		cacheDir, err := os.UserCacheDir()
+		if err != nil {
+			cacheDir = filepath.Join(os.Getenv("HOME"), ".cache")
+		}
+		dbPath = filepath.Join(cacheDir, "lazyos", "lazyos.db")
+	}
+
+	st, err := sqlite.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open sqlite store: %w", err)
+	}
+	defer st.Close()
+
+	for name, client := range clients {
+		clients[name] = cache.NewCachedQueryer(client, st)
+	}
+	log.Info("persistent store opened", "path", dbPath)
+
+	// 4. Start Application
 	return startTUI(ctx, clients, backendOrder, cfg.Keys)
 }
 
@@ -153,7 +177,7 @@ func Execute(ctx context.Context) error {
 	// rootCmd defines the top-level CLI command broken down into lifecycle hooks.
 	rootCmd := &cobra.Command{
 		Use:   "lazyos",
-		Short: "A TUI for real-time osquery system visualization",
+		Short: "A TUI for exploring live system data across multiple backends",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := initConfig(); err != nil {
 				return err
@@ -173,6 +197,7 @@ func Execute(ctx context.Context) error {
 	rootCmd.Flags().String("log-file", "", "Override default log file path")
 	rootCmd.Flags().Bool("keep-log", false, "Keep the log file after exit")
 	rootCmd.Flags().StringSlice("backend", []string{"kernel"}, "Backends to enable: kernel, aws")
+	rootCmd.Flags().String("cache-db-path", "", "Path to the cache SQLite database")
 
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
 		return err

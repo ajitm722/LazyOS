@@ -103,8 +103,8 @@ func (a AutofillAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	return m, nil
 }
 
-// ExecuteAction runs the SQL in the query bar and shifts focus to results.
-// Only active when the query bar is focused.
+// ExecuteAction runs the SQL in the query bar against the local cache and
+// shifts focus to results. Only active when the query bar is focused.
 type ExecuteAction struct{}
 
 func (a ExecuteAction) Apply(m AppModel) (AppModel, tea.Cmd) {
@@ -113,8 +113,25 @@ func (a ExecuteAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	}
 	v := m.layout.Querybar.Input.Value()
 	if v != "" {
-		slog.Debug("execute triggered via ExecuteAction", "query", v)
+		slog.Debug("execute cached triggered via ExecuteAction", "query", v)
 		return m, func() tea.Msg { return RunQueryMsg{SQL: v} }
+	}
+	return m, nil
+}
+
+// ExecuteSourceAction runs the SQL in the query bar against the upstream
+// source and updates the local cache with the result.
+// Only active when the query bar is focused.
+type ExecuteSourceAction struct{}
+
+func (a ExecuteSourceAction) Apply(m AppModel) (AppModel, tea.Cmd) {
+	if m.panes.Current() != PaneQuery {
+		return m, nil
+	}
+	v := m.layout.Querybar.Input.Value()
+	if v != "" {
+		slog.Debug("execute source triggered via ExecuteSourceAction", "query", v)
+		return m, func() tea.Msg { return RunSourceQueryMsg{SQL: v} }
 	}
 	return m, nil
 }

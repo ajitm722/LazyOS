@@ -41,6 +41,5 @@ var KernelTables = []daemons.TableSchema{
 	{Name: "memory_info", Description: "Main memory information in bytes.", Columns: "memory_total, memory_free, buffers, cached, swap_cached, active, inactive, swap_total, swap_free"},
 	{Name: "cpu_time", Description: "System CPU time data.", Columns: "core, user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice"},
 	{Name: "crontab", Description: "Parsed crontab contents.", Columns: "event, minute, hour, day_of_month, month, day_of_week, command, path"},
-	{Name: "suid_bin", Description: "suid binaries in common locations.", Columns: "path, username, groupname, permissions"},
 	{Name: "iptables", Description: "Linux IP packet filtering and NAT tool.", Columns: "filter_name, chain, policy, target, protocol, src_ip, src_mask, dst_ip, dst_mask, iniface, outiface, match"},
 }

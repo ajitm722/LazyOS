@@ -189,3 +189,23 @@ func TestSelectAllThenNonMatchingKey(t *testing.T) {
 		t.Errorf("expected value to be preserved, got %q", m2.Input.Value())
 	}
 }
+
+// TestBlur verifies that Blur deactivates the querybar, marks it as not
+// focused, and sets selected to false.
+func TestBlur(t *testing.T) {
+	m := modelWithValue("some query")
+	if !m.active {
+		t.Fatal("expected active after Focus()")
+	}
+
+	m.Blur()
+	if m.active {
+		t.Error("expected active=false after Blur")
+	}
+	if m.selected {
+		t.Error("expected selected=false after Blur")
+	}
+	if m.Input.Focused() {
+		t.Error("expected input not focused after Blur")
+	}
+}

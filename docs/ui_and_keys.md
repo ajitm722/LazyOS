@@ -16,7 +16,6 @@ The interface consists of three interactive panes:
 │ │ users      │ │ name  = nginx                │ │
 │ │            │ │ state = LISTEN               │ │
 │ └────────────┘ └──────────────────────────────┘ │
-│ -- NORMAL -- j/k: nav t: toggle a: autofill e: execute ^l: next ^h: prev ^c: quit │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -37,7 +36,8 @@ Global keybindings dictate layout manipulation, lifecycle events, and window man
 * **Ctrl+H (`focus_prev`)**: Shifts the active `focus` backward through the panes.
 * **`t` (`toggle_table`)**: Toggles the `isTableMode` boolean. Switches the results display between a vertical key-value line mode and a horizontal, scrollable column table mode.
 * **`a` (`autofill`)**: In the Table List pane, retrieves the selected table name, constructs a `SELECT <columns> FROM <table> LIMIT 10;` query, populates the Query Input pane, and shifts focus (remaining in NORMAL mode).
-* **`e` (`execute`)**: In the Query Input pane, executes the currently populated SQL query and shifts focus to the Results pane.
+* **`e` (`execute`)**: In the Query Input pane, executes the currently populated SQL query against the **local cache** (SQLite store). Uncached tables are lazy-loaded from the upstream before the query runs. Focus shifts to the Results pane.
+* **`E` (`execute_source`)**: In the Query Input pane, executes the currently populated SQL query against the **upstream source** (osqueryd). Every referenced table is refreshed in the local cache before the query runs. Focus shifts to the Results pane.
 * **`q` (`quit`)**: Terminates the application cleanly via `tea.Quit`.
 
 ### Navigation in NORMAL Mode
@@ -54,7 +54,8 @@ In NORMAL mode, each pane responds to `j` and `k` for vertical movement:
 Contextual keys defer based on which pane holds the active `focus`.
 
 * **`a` (Table List Focused)**: Autofills the query bar with a `SELECT <columns> FROM <table> LIMIT 10;` query for the selected table. Focus shifts to the query bar in NORMAL mode.
-* **`e` (Query Input Focused)**: Executes the currently populated SQL query. The response is formatted into the Results pane and focus shifts there.
+* **`e` (Query Input Focused)**: Executes the currently populated SQL query against the local cache. Shortcut after the first access — subsequent queries against the same table are instant.
+* **`E` (Query Input Focused)**: Executes the currently populated SQL query against the upstream source. Authoritative — always fetches fresh data and updates the local cache before returning.
 * **`i` (Query Input Focused, NORMAL mode)**: Enters INSERT mode, allowing text to be typed into the SQL editor. The cursor appears and the mode indicator changes to `-- INSERT --`.
 * **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode, hiding the cursor, restoring command-key behaviour, and clearing any active selection highlight on the query text.
 * **Ctrl+A (Query Input Focused, INSERT mode)**: Toggles a "select all" state on the input. When activated, the entire query text is displayed with inverted foreground/background colors (selection highlight). The next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text and restores the normal text style.

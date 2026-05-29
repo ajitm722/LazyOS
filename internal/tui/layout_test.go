@@ -132,3 +132,16 @@ func TestComputePaneSizes(t *testing.T) {
 		t.Errorf("expected positive inputWidth, got %d", sizes.inputWidth)
 	}
 }
+
+// TestLayoutViewInsertMode verifies that the View function renders the
+// INSERT mode indicator when called with InsertMode.
+// TestLayoutViewInsertMode verifies that the View function renders the
+// INSERT mode indicator when called with InsertMode.
+func TestLayoutViewInsertMode(t *testing.T) {
+	m := newAppModel(&mock.MockQueryer{})
+	m.mode = InsertMode
+	view := m.View()
+	if !strings.Contains(view, "INSERT") {
+		t.Errorf("expected INSERT mode indicator, got:\n%s", view)
+	}
+}

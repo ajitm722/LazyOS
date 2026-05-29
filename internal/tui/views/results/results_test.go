@@ -120,6 +120,18 @@ func TestFormatError(t *testing.T) {
 	}
 }
 
+// TestFormatMessage verifies that FormatMessage sets the viewport content
+// to the given string and clears the table widget.
+func TestFormatMessage(t *testing.T) {
+	m := New()
+	m.View.Width = 50
+	m.View.Height = 20
+	m = m.FormatMessage("loading...")
+	if !strings.Contains(m.View.View(), "loading") {
+		t.Errorf("expected 'loading...', got %s", m.View.View())
+	}
+}
+
 // TestComputeTableLayout verifies that computeTableLayout produces a layout
 // with the expected number of keys and a positive column width.
 func TestComputeTableLayout(t *testing.T) {
@@ -193,5 +205,50 @@ func TestBuildRowsTruncationLargeWidth(t *testing.T) {
 	val := rows[0][0]
 	if len(val) > 5 {
 		t.Errorf("expected length <= 5, got %d (%s)", len(val), val)
+	}
+}
+
+// TestUpdateResultsLineModeJKey verifies that pressing j in line mode
+// scrolls the viewport down.
+func TestUpdateResultsLineModeJKey(t *testing.T) {
+	m := New()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	content := strings.Repeat("line\n", 100)
+	m.View.SetContent(content)
+	m.View.GotoTop()
+	orig := m.View.YOffset
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m2.View.YOffset <= orig {
+		t.Error("expected y offset to increase after pressing j")
+	}
+}
+
+// TestUpdateResultsLineModeKKey verifies that pressing k in line mode
+// scrolls the viewport up.
+func TestUpdateResultsLineModeKKey(t *testing.T) {
+	m := New()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	content := strings.Repeat("line\n", 100)
+	m.View.SetContent(content)
+	m.View.GotoTop()
+	m.View.LineDown(5)
+	orig := m.View.YOffset
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if m2.View.YOffset >= orig {
+		t.Error("expected y offset to decrease after pressing k")
+	}
+}
+
+// TestUpdateTableMode verifies that key events in table mode are delegated
+// to the table widget.
+func TestUpdateTableMode(t *testing.T) {
+	m := New()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	m.IsTableMode = true
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if !m2.IsTableMode {
+		t.Error("expected IsTableMode to stay true")
 	}
 }

@@ -18,7 +18,7 @@ type Client struct {
 }
 
 func NewClient(socketPath string, startupTimeout time.Duration, queryTimeout time.Duration, schema []daemons.TableSchema) (*Client, error) {
-	client, err := goosquery.NewClient(socketPath, startupTimeout)
+	client, err := goosquery.NewClient(socketPath, startupTimeout, goosquery.MaxWaitTime(queryTimeout))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to osquery socket: %w", err)
 	}
@@ -45,17 +45,14 @@ func (c *Client) Close() error {
 // executeThriftQuery performs the raw Thrift RPC call and returns the result
 // rows. Columns are not returned here; they are derived from the client's
 // schema when rows == 0.
-func (c *Client) executeThriftQuery(sql string) ([]map[string]string, error) {
-	resp, err := c.client.Query(sql)
+// The ctx must carry a deadline; otherwise the underlying socket locker
+// falls back to a very short internal default.
+func (c *Client) executeThriftQuery(ctx context.Context, sql string) ([]map[string]string, error) {
+	rows, err := c.client.QueryRowsContext(ctx, sql)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", daemons.ErrQueryFailed, err)
 	}
-
-	if resp.Status != nil && resp.Status.Code != 0 {
-		return nil, fmt.Errorf("%w: status code %d, message: %s", daemons.ErrQueryFailed, resp.Status.Code, resp.Status.Message)
-	}
-
-	return resp.Response, nil
+	return rows, nil
 }
 
 func (c *Client) Query(ctx context.Context, sql string) ([]map[string]string, []string, error) {
@@ -73,7 +70,7 @@ func (c *Client) Query(ctx context.Context, sql string) ([]map[string]string, []
 	ch := make(chan result, 1)
 
 	go func() {
-		rows, err := c.executeThriftQuery(sql)
+		rows, err := c.executeThriftQuery(queryCtx, sql)
 		ch <- result{rows: rows, err: err}
 	}()
 

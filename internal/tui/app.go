@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/ajitm722/LazyOS/internal/cache"
 	"github.com/ajitm722/LazyOS/internal/config"
 	"github.com/ajitm722/LazyOS/internal/daemons"
 	"github.com/ajitm722/LazyOS/internal/logger"
@@ -45,14 +46,14 @@ type AppModel struct {
 	activeBackend string                     // key into clients for the current backend
 }
 
-// getDefaultBackend prefers "osquery-kernel" if available, otherwise falls
-// back to the first entry in the ordered list.
+// getDefaultBackend prefers "kernel" if available, otherwise falls back to
+// the first entry in the ordered list.
 func getDefaultBackend(clients map[string]daemons.Queryer, backendOrder []string) string {
 	for _, k := range backendOrder {
 		if _, ok := clients[k]; !ok {
 			continue
 		}
-		if k == "osquery-kernel" {
+		if k == "kernel" {
 			return k
 		}
 	}
@@ -117,6 +118,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleAutofillMsg(msg)
 	case RunQueryMsg:
 		return m.handleRunQueryMsg(msg)
+	case RunSourceQueryMsg:
+		return m.handleRunSourceQueryMsg(msg)
 	case QueryResultMsg:
 		return m.handleQueryResultMsg(msg)
 	case QueryErrorMsg:
@@ -210,7 +213,7 @@ func (m AppModel) handleAutofillMsg(msg AutofillMsg) (tea.Model, tea.Cmd) {
 // either a QueryResultMsg or QueryErrorMsg via the tea.Cmd channel.
 func (m AppModel) handleRunQueryMsg(msg RunQueryMsg) (tea.Model, tea.Cmd) {
 	sql := msg.SQL
-	slog.Info("Executing query", "sql", sql)
+	slog.Info("Executing cached query", "sql", sql)
 
 	m.layout.Results = m.layout.Results.FormatMessage("Fetching data...")
 
@@ -222,6 +225,38 @@ func (m AppModel) handleRunQueryMsg(msg RunQueryMsg) (tea.Model, tea.Cmd) {
 			return QueryErrorMsg{Err: err}
 		}
 		slog.Info("Query executed successfully", "sql", sql, "rows", len(rows))
+		return QueryResultMsg{Rows: rows, Columns: cols}
+	}
+	return m, cmd
+}
+
+// handleRunSourceQueryMsg spawns a goroutine that calls the upstream source
+// and updates the local cache, or falls back to a regular query when no
+// cache is configured.
+func (m AppModel) handleRunSourceQueryMsg(msg RunSourceQueryMsg) (tea.Model, tea.Cmd) {
+	sql := msg.SQL
+	slog.Info("Executing source query", "sql", sql)
+
+	m.layout.Results = m.layout.Results.FormatMessage("Fetching from source...")
+
+	cmd := func() tea.Msg {
+		ctx := logger.WithLogger(context.Background(), slog.Default())
+
+		var rows []map[string]string
+		var cols []string
+		var err error
+
+		if cq, ok := m.clients[m.activeBackend].(*cache.CachedQueryer); ok {
+			rows, cols, err = cq.QuerySource(ctx, sql)
+		} else {
+			rows, cols, err = m.clients[m.activeBackend].Query(ctx, sql)
+		}
+
+		if err != nil {
+			slog.Error("Source query execution failed", "sql", sql, "error", err)
+			return QueryErrorMsg{Err: err}
+		}
+		slog.Info("Source query executed successfully", "sql", sql, "rows", len(rows))
 		return QueryResultMsg{Rows: rows, Columns: cols}
 	}
 	return m, cmd
