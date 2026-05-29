@@ -209,6 +209,8 @@ func (m AppModel) handleRunQueryMsg(msg RunQueryMsg) (tea.Model, tea.Cmd) {
 	sql := msg.SQL
 	slog.Info("Executing query", "sql", sql)
 
+	m.layout.Results = m.layout.Results.FormatMessage("Fetching data...")
+
 	cmd := func() tea.Msg {
 		ctx := logger.WithLogger(context.Background(), slog.Default())
 		rows, cols, err := m.clients[m.activeBackend].Query(ctx, sql)

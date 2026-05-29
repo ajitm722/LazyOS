@@ -161,3 +161,16 @@ func (m Model) FormatError(err error) Model {
 	m.Table = newTable
 	return m
 }
+
+// FormatMessage sets the viewport content to an arbitrary status message and
+// clears the table widget. Used for loading states (e.g. "Fetching data...")
+// before query results arrive.
+func (m Model) FormatMessage(msg string) Model {
+	m.View.SetContent(msg)
+	m.View.GotoTop()
+
+	newTable := table.New(table.WithFocused(true))
+	newTable.SetStyles(m.tableStyles)
+	m.Table = newTable
+	return m
+}
