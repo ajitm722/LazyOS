@@ -81,9 +81,12 @@ func NewApp(clients map[string]daemons.Queryer, backendOrder []string, cfg confi
 		backend = clients[activeBackend]
 	}
 
+	sidebarModel := sidebar.New(backend)
+	sidebarModel.List.Title = activeBackend
+
 	return AppModel{
 		layout: Layout{
-			Sidebar:  sidebar.New(backend),
+			Sidebar:  sidebarModel,
 			Querybar: querybar.New(),
 			Results:  results.New(),
 			Help:     help.New(),

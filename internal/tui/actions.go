@@ -73,6 +73,7 @@ func (a NextBackendAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	m.activeBackend = m.backendOrder[m.activeIndex]
 
 	m.layout.Sidebar = sidebar.New(m.clients[m.activeBackend])
+	m.layout.Sidebar.List.Title = m.activeBackend
 
 	bounds := computePaneBounds(m.layout.termWidth, m.layout.termHeight)
 	var cmd tea.Cmd
