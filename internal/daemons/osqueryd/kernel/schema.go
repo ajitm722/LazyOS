@@ -1,9 +1,9 @@
-package osquery
+package kernel
 
 import "github.com/ajitm722/LazyOS/internal/daemons"
 
-// CoreTables contains the prefilled catalog of the most useful tables for backend/system observability.
-var CoreTables = []daemons.TableSchema{
+// KernelTables contains the prefilled catalog of the most useful tables for kernel/system observability.
+var KernelTables = []daemons.TableSchema{
 	// Process & Memory
 	{Name: "processes", Description: "All running processes on the host system.", Columns: "pid, name, path, cmdline, state, cwd, root, uid, gid, on_disk, resident_size, total_size"},
 	{Name: "process_envs", Description: "Environment variables for running processes.", Columns: "pid, key, value"},

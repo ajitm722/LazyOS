@@ -61,6 +61,29 @@ func (a FocusPrevAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	return m, nil
 }
 
+// NextBackendAction cycles to the next backend in the ordered list, rebuilding
+// the sidebar with the new backend's schema.
+type NextBackendAction struct{}
+
+func (a NextBackendAction) Apply(m AppModel) (AppModel, tea.Cmd) {
+	if len(m.backendOrder) <= 1 {
+		return m, nil
+	}
+	m.activeIndex = (m.activeIndex + 1) % len(m.backendOrder)
+	m.activeBackend = m.backendOrder[m.activeIndex]
+
+	m.layout.Sidebar = sidebar.New(m.clients[m.activeBackend])
+
+	bounds := computePaneBounds(m.layout.termWidth, m.layout.termHeight)
+	var cmd tea.Cmd
+	m.layout.Sidebar, cmd = m.layout.Sidebar.Update(
+		tea.WindowSizeMsg{Width: bounds.leftWidth, Height: bounds.leftHeight},
+	)
+
+	slog.Info("Switched backend", "backend", m.activeBackend)
+	return m, cmd
+}
+
 // AutofillAction fills the query bar with a SELECT query for the selected
 // sidebar table. Only active when the sidebar is focused and not in filter mode.
 type AutofillAction struct{}

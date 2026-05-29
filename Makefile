@@ -1,9 +1,11 @@
-.PHONY: help build run run-with-defaults test test-verbose test-force test-integration test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
+.PHONY: help build run run-with-defaults run-sandbox-all test test-verbose test-force test-integration test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
 
 # Default binary name
 BINARY_NAME=lazyos
 
 OSQUERY_BIN := ./build/osquery/osqueryd
+
+BACKENDS := --backend kernel
 
 help: ## Show this help menu
 	@echo "Usage: make [target]"
@@ -36,18 +38,21 @@ build: ## Build the lazyos binary
 	@go build -o $(BINARY_NAME) ./cmd/lazyos
 
 run-sandbox: setup-sandbox build ## Run LazyOS in an isolated sandbox with an ephemeral daemon
-	@echo "Launching LazyOS in sandbox..."
-	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) ./$(BINARY_NAME) --osquery-socket=LAZYOS_TEST_SOCKET
+	@echo "Launching LazyOS in sandbox (backends: $(BACKENDS))..."
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) ./$(BINARY_NAME) --osquery-socket=LAZYOS_TEST_SOCKET $(BACKENDS)
 	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
+
+run-sandbox-all: BACKENDS := --backend kernel --backend aws
+run-sandbox-all: run-sandbox ## Run LazyOS sandbox with both kernel and AWS backends enabled
 
 test-integration: setup-sandbox ## Run integration tests (summary) against a live, ephemeral osquery daemon
 	@echo "Running integration tests..."
-	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format pkgname -- -tags=integration ./internal/daemons/osquery/...
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format pkgname -- -tags=integration ./internal/daemons/osqueryd/...
 	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
 
 test-integration-verbose: setup-sandbox ## Run integration tests with verbose output against a live, ephemeral osquery daemon
 	@echo "Running integration tests (verbose)..."
-	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format standard-verbose -- -tags=integration ./internal/daemons/osquery/...
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) gotestsum --format standard-verbose -- -tags=integration ./internal/daemons/osqueryd/...
 	@echo "The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it."
 	
 run: ## Run LazyOS interactively, prompting for configuration flags
@@ -61,6 +66,8 @@ run: ## Run LazyOS interactively, prompting for configuration flags
 	startup_timeout=$${startup_timeout:-2s}; \
 	read -p "  Query Timeout [10s]: " query_timeout; \
 	query_timeout=$${query_timeout:-10s}; \
+	read -p "  Backends (comma-separated) [kernel]: " backends; \
+	backends=$${backends:-kernel}; \
 	read -p "  Log File [~/.local/state/lazyos/lazyos.log]: " log_file; \
 	log_file=$${log_file:-}; \
 	read -p "  Keep Log File? (true/false) [false]: " keep_log; \
@@ -71,6 +78,9 @@ run: ## Run LazyOS interactively, prompting for configuration flags
 	flags="$$flags --osquery-socket=$$socket"; \
 	flags="$$flags --osquery-startup-timeout=$$startup_timeout"; \
 	flags="$$flags --osquery-query-timeout=$$query_timeout"; \
+	for b in $$(echo "$$backends" | tr ',' ' '); do \
+		flags="$$flags --backend=$$b"; \
+	done; \
 	[ -n "$$log_file" ] && flags="$$flags --log-file=$$log_file"; \
 	flags="$$flags --keep-log=$$keep_log"; \
 	echo "  Running: lazyos$$flags"; \
@@ -79,6 +89,7 @@ run: ## Run LazyOS interactively, prompting for configuration flags
 		--osquery-socket="$$socket" \
 		--osquery-startup-timeout="$$startup_timeout" \
 		--osquery-query-timeout="$$query_timeout" \
+		$$(for b in $$(echo "$$backends" | tr ',' ' '); do echo "--backend=$$b"; done) \
 		$$( [ -n "$$log_file" ] && echo "--log-file=$$log_file" ) \
 		--keep-log="$$keep_log"
 
@@ -113,7 +124,7 @@ test-coverage: ## Run tests and display coverage in CLI (only packages with test
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
 	@echo "    - internal/config         (types-only package, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osquery    (requires live osquery socket; run via 'make test-integration')"
+	@echo "    - internal/daemons/osqueryd    (requires live osquery socket; run via 'make test-integration')"
 	@echo ""
 	@gotestsum --format pkgname -- -cover $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 
@@ -132,7 +143,7 @@ test-coverage-html: ## Run tests and open HTML coverage report in browser (only 
 	@echo "    - cmd/lazyos              (entry point, no logic to test)"
 	@echo "    - internal/config         (types-only package, no logic)"
 	@echo "    - internal/daemons/mock   (test helpers consumed by other tests)"
-	@echo "    - internal/daemons/osquery    (requires live osquery socket; run via 'make test-integration')"
+	@echo "    - internal/daemons/osqueryd    (requires live osquery socket; run via 'make test-integration')"
 	@echo ""
 	@gotestsum --format pkgname -- -coverprofile=coverage.out $$(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 	@go tool cover -html=coverage.out

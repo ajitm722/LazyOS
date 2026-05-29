@@ -39,6 +39,11 @@ func NewInputHandler(cfg config.Keys) InputHandler {
 				ShowInShortHelp: true,
 			},
 			{
+				Binding:         bind("B", cfg.NextBackend, "next backend"),
+				Action:          NextBackendAction{},
+				ShowInShortHelp: true,
+			},
+			{
 				Binding:         bind("a", cfg.Autofill, "autofill"),
 				Action:          AutofillAction{},
 				ShowInShortHelp: true,
@@ -49,9 +54,9 @@ func NewInputHandler(cfg config.Keys) InputHandler {
 				ShowInShortHelp: true,
 			},
 			{
-			Binding:         bind("q", cfg.Quit, "quit"),
-			Action:          QuitAction{},
-			ShowInShortHelp: true,
+				Binding:         bind("q", cfg.Quit, "quit"),
+				Action:          QuitAction{},
+				ShowInShortHelp: true,
 			},
 		},
 	}

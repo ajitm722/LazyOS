@@ -32,34 +32,50 @@ const (
 )
 
 // AppModel is the root Bubble Tea model. It owns the Layout, input routing,
-// pane manager, and backend clients — but delegates all screen math and
-// rendering to the Layout struct.
+// pane manager, backend cycling, and backend clients — but delegates all screen
+// math and rendering to the Layout struct.
 type AppModel struct {
 	mode          Mode                       // vim input mode (normal/insert)
 	layout        Layout                     // screen layout and rendering
 	input         InputHandler               // key bindings and action registry
 	panes         PaneManager                // focus order and active pane tracking
-	clients       map[string]daemons.Queryer // active daemon connections
-	activeBackend string                     // key into clients for the current daemon
+	clients       map[string]daemons.Queryer // active backend connections
+	backendOrder  []string                   // ordered list of backend names for cycling
+	activeIndex   int                        // index into backendOrder
+	activeBackend string                     // key into clients for the current backend
 }
 
-// getDefaultBackend safely determines which client should be displayed on startup.
-// It prefers osquery if available, otherwise it falls back to any loaded client.
-func getDefaultBackend(clients map[string]daemons.Queryer) string {
-	var active string
-	for k := range clients {
-		active = k
-		if k == "osquery" {
-			break
+// getDefaultBackend prefers "osquery-kernel" if available, otherwise falls
+// back to the first entry in the ordered list.
+func getDefaultBackend(clients map[string]daemons.Queryer, backendOrder []string) string {
+	for _, k := range backendOrder {
+		if _, ok := clients[k]; !ok {
+			continue
+		}
+		if k == "osquery-kernel" {
+			return k
 		}
 	}
-	return active
+	for _, k := range backendOrder {
+		if _, ok := clients[k]; ok {
+			return k
+		}
+	}
+	return ""
 }
 
 // NewApp constructs the root AppModel and wires all layout, input routing,
-// and background clients together declaratively.
-func NewApp(clients map[string]daemons.Queryer, cfg config.Keys) tea.Model {
-	activeBackend := getDefaultBackend(clients)
+// backend cycling, and background clients together declaratively.
+func NewApp(clients map[string]daemons.Queryer, backendOrder []string, cfg config.Keys) tea.Model {
+	activeBackend := getDefaultBackend(clients, backendOrder)
+	var activeIndex int
+	for i, k := range backendOrder {
+		if k == activeBackend {
+			activeIndex = i
+			break
+		}
+	}
+
 	var backend daemons.Queryer
 	if activeBackend != "" {
 		backend = clients[activeBackend]
@@ -75,6 +91,8 @@ func NewApp(clients map[string]daemons.Queryer, cfg config.Keys) tea.Model {
 		input:         NewInputHandler(cfg),
 		panes:         NewPaneManager(),
 		clients:       clients,
+		backendOrder:  backendOrder,
+		activeIndex:   activeIndex,
 		activeBackend: activeBackend,
 	}
 }

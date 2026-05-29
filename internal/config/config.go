@@ -13,6 +13,7 @@ type Keys struct {
 	Autofill    string `mapstructure:"autofill"`
 	Execute     string `mapstructure:"execute"`
 	Quit        string `mapstructure:"quit"`
+	NextBackend string `mapstructure:"next_backend"`
 }
 
 // Config is the top-level application configuration. It is deserialized from
@@ -24,4 +25,5 @@ type Config struct {
 	LogFile               string        `mapstructure:"log-file"`
 	KeepLog               bool          `mapstructure:"keep-log"`
 	Keys                  Keys          `mapstructure:"keys"`
+	Backends              []string      `mapstructure:"backend"`
 }

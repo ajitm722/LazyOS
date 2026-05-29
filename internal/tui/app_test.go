@@ -17,7 +17,7 @@ func newAppModel(mq *mock.MockQueryer) AppModel {
 
 // newAppModelSized builds an AppModel with a custom terminal size.
 func newAppModelSized(mq *mock.MockQueryer, width, height int) AppModel {
-	m := NewApp(map[string]daemons.Queryer{"mock": mq}, config.Keys{}).(AppModel)
+	m := NewApp(map[string]daemons.Queryer{"mock": mq}, []string{"mock"}, config.Keys{}).(AppModel)
 	m2, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: height})
 	return m2.(AppModel)
 }
@@ -73,24 +73,40 @@ func TestQuitAction(t *testing.T) {
 }
 
 // TestGetDefaultBackend exercises the startup-backend-preference logic.
-// It uses a table-driven pattern covering: osquery preferred over others,
-// fallback to the first key when osquery is absent, and empty-map edge case.
+// It verifies that "osquery-kernel" is preferred when present, then falls
+// back to the first entry in the ordered list.
 func TestGetDefaultBackend(t *testing.T) {
 	mock1 := &mock.MockQueryer{}
 	mock2 := &mock.MockQueryer{}
 
 	tests := []struct {
-		name    string
-		clients map[string]daemons.Queryer
-		want    string
+		name         string
+		clients      map[string]daemons.Queryer
+		backendOrder []string
+		want         string
 	}{
-		{name: "prefers osquery", clients: map[string]daemons.Queryer{"other": mock1, "osquery": mock2}, want: "osquery"},
-		{name: "fallback to first", clients: map[string]daemons.Queryer{"custom": mock1}, want: "custom"},
-		{name: "empty clients", clients: map[string]daemons.Queryer{}, want: ""},
+		{
+			name:         "prefers osquery-kernel",
+			clients:      map[string]daemons.Queryer{"osquery-aws": mock1, "osquery-kernel": mock2},
+			backendOrder: []string{"osquery-aws", "osquery-kernel"},
+			want:         "osquery-kernel",
+		},
+		{
+			name:         "fallback to first in order",
+			clients:      map[string]daemons.Queryer{"custom": mock1},
+			backendOrder: []string{"custom"},
+			want:         "custom",
+		},
+		{
+			name:         "empty order",
+			clients:      map[string]daemons.Queryer{},
+			backendOrder: []string{},
+			want:         "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getDefaultBackend(tt.clients); got != tt.want {
+			if got := getDefaultBackend(tt.clients, tt.backendOrder); got != tt.want {
 				t.Errorf("getDefaultBackend() = %q, want %q", got, tt.want)
 			}
 		})

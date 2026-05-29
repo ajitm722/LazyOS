@@ -21,7 +21,7 @@ import (
 // expected action type via reflect.TypeOf, ensuring the ActionRegistry
 // mapping is correct after overrides.
 func TestKeyBindingOverride(t *testing.T) {
-	m := NewApp(map[string]daemons.Queryer{"mock": &mock.MockQueryer{}}, config.Keys{
+	m := NewApp(map[string]daemons.Queryer{"mock": &mock.MockQueryer{}}, []string{"mock"}, config.Keys{
 		ToggleTable: "ctrl+t",
 		FocusNext:   "ctrl+n",
 	}).(AppModel)

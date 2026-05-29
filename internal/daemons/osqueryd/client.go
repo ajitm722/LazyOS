@@ -1,4 +1,4 @@
-package osquery
+package osqueryd
 
 import (
 	"context"
@@ -11,19 +11,28 @@ import (
 	goosquery "github.com/osquery/osquery-go"
 )
 
-var _ daemons.Queryer = (*Client)(nil)
-
 type Client struct {
 	client       *goosquery.ExtensionManagerClient
 	queryTimeout time.Duration
+	Schema       []daemons.TableSchema
 }
 
-func NewClient(socketPath string, startupTimeout time.Duration, queryTimeout time.Duration) (*Client, error) {
+func NewClient(socketPath string, startupTimeout time.Duration, queryTimeout time.Duration, schema []daemons.TableSchema) (*Client, error) {
 	client, err := goosquery.NewClient(socketPath, startupTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to osquery socket: %w", err)
 	}
-	return &Client{client: client, queryTimeout: queryTimeout}, nil
+	return &Client{client: client, queryTimeout: queryTimeout, Schema: schema}, nil
+}
+
+// NewClientFromConfig creates a Client using the osquery fields from the app
+// config. Returns (nil, nil) when the socket path is empty, signalling the
+// caller to skip this backend.
+func NewClientFromConfig(cfg config.Config, schema []daemons.TableSchema) (*Client, error) {
+	if cfg.OsquerySocket == "" {
+		return nil, nil
+	}
+	return NewClient(cfg.OsquerySocket, cfg.OsqueryStartupTimeout, cfg.OsqueryQueryTimeout, schema)
 }
 
 func (c *Client) Close() error {
@@ -34,7 +43,8 @@ func (c *Client) Close() error {
 }
 
 // executeThriftQuery performs the raw Thrift RPC call and returns the result
-// rows. Columns are not returned here; they are derived from CoreTables.
+// rows. Columns are not returned here; they are derived from the client's
+// schema when rows == 0.
 func (c *Client) executeThriftQuery(sql string) ([]map[string]string, error) {
 	resp, err := c.client.Query(sql)
 	if err != nil {
@@ -80,28 +90,14 @@ func (c *Client) Query(ctx context.Context, sql string) ([]map[string]string, []
 
 		var cols []string
 		if len(res.rows) > 0 {
-			// Use columns as returned by the external client
 			for k := range res.rows[0] {
 				cols = append(cols, k)
 			}
 		} else {
-			// 0 rows: fall back to schema for column metadata
-			cols = daemons.DeriveColumnsFromSchema(sql, CoreTables)
+			cols = daemons.DeriveColumnsFromSchema(sql, c.Schema)
 		}
 
 		log.Debug("osquery client query completed", "sql", sql, "rows_returned", len(res.rows))
 		return res.rows, cols, nil
 	}
-}
-
-func InitFromConfig(cfg config.Config) (name string, _ daemons.Queryer, _ error) {
-	if cfg.OsquerySocket == "" {
-		return "", nil, nil
-	}
-	c, err := NewClient(cfg.OsquerySocket, cfg.OsqueryStartupTimeout, cfg.OsqueryQueryTimeout)
-	return "osquery", c, err
-}
-
-func (c *Client) GetSchema() []daemons.TableSchema {
-	return CoreTables
 }

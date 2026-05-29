@@ -1,6 +1,6 @@
 //go:build integration
 
-package osquery
+package osqueryd_test
 
 import (
 	"context"
@@ -9,7 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ajitm722/LazyOS/internal/config"
 	"github.com/ajitm722/LazyOS/internal/daemons"
+	osqueryd "github.com/ajitm722/LazyOS/internal/daemons/osqueryd"
+	"github.com/ajitm722/LazyOS/internal/daemons/osqueryd/kernel"
 )
 
 const (
@@ -26,8 +29,30 @@ func socketPath(t *testing.T) string {
 	return p
 }
 
+// newTestQueryer creates a kernel Queryer connected to the test socket.
+func newTestQueryer(t *testing.T) *kernel.Queryer {
+	t.Helper()
+	cfg := config.Config{
+		OsquerySocket:         socketPath(t),
+		OsqueryStartupTimeout: startupTimeout,
+		OsqueryQueryTimeout:   queryTimeout,
+	}
+	name, q, err := kernel.InitFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("kernel.InitFromConfig: %v", err)
+	}
+	if name != "osquery-kernel" {
+		t.Fatalf("expected name %q, got %q", "osquery-kernel", name)
+	}
+	kq, ok := q.(*kernel.Queryer)
+	if !ok {
+		t.Fatalf("expected *kernel.Queryer, got %T", q)
+	}
+	return kq
+}
+
 func TestIntegrationNewClient_ValidSocket(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
+	c, err := osqueryd.NewClient(socketPath(t), startupTimeout, queryTimeout, kernel.KernelTables)
 	if err != nil {
 		t.Fatalf("NewClient with valid socket returned error: %v", err)
 	}
@@ -40,26 +65,23 @@ func TestIntegrationNewClient_ValidSocket(t *testing.T) {
 }
 
 func TestIntegrationNewClient_InvalidSocket(t *testing.T) {
-	_, err := NewClient("/nonexistent/socket.em", 0, 0)
+	_, err := osqueryd.NewClient("/nonexistent/socket.em", 0, 0, nil)
 	if err == nil {
 		t.Fatal("NewClient with invalid socket expected error, got nil")
 	}
 }
 
 func TestIntegrationGetSchema(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-	defer c.Close()
+	q := newTestQueryer(t)
+	defer q.Close()
 
-	schema := c.GetSchema()
-	if len(schema) != len(CoreTables) {
-		t.Errorf("GetSchema returned %d tables, want %d", len(schema), len(CoreTables))
+	schema := q.GetSchema()
+	if len(schema) != len(kernel.KernelTables) {
+		t.Errorf("GetSchema returned %d tables, want %d", len(schema), len(kernel.KernelTables))
 	}
 	for _, s := range schema {
 		found := false
-		for _, ct := range CoreTables {
+		for _, ct := range kernel.KernelTables {
 			if ct.Name == s.Name && ct.Columns == s.Columns {
 				found = true
 				break
@@ -72,13 +94,10 @@ func TestIntegrationGetSchema(t *testing.T) {
 }
 
 func TestIntegrationQuery_Basic(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-	defer c.Close()
+	q := newTestQueryer(t)
+	defer q.Close()
 
-	rows, cols, err := c.Query(context.Background(), "SELECT pid, name FROM processes LIMIT 1")
+	rows, cols, err := q.Query(context.Background(), "SELECT pid, name FROM processes LIMIT 1")
 	if err != nil {
 		t.Fatalf("Query failed: %v", err)
 	}
@@ -107,7 +126,7 @@ func TestIntegrationQuery_Basic(t *testing.T) {
 }
 
 func TestIntegrationQuery_Timeout(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
+	c, err := osqueryd.NewClient(socketPath(t), startupTimeout, queryTimeout, kernel.KernelTables)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -123,7 +142,7 @@ func TestIntegrationQuery_Timeout(t *testing.T) {
 }
 
 func TestIntegrationQuery_InvalidSQL(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
+	c, err := osqueryd.NewClient(socketPath(t), startupTimeout, queryTimeout, kernel.KernelTables)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -136,7 +155,7 @@ func TestIntegrationQuery_InvalidSQL(t *testing.T) {
 }
 
 func TestIntegrationQuery_EmptyResult(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
+	c, err := osqueryd.NewClient(socketPath(t), startupTimeout, queryTimeout, kernel.KernelTables)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -156,7 +175,7 @@ func TestIntegrationQuery_EmptyResult(t *testing.T) {
 
 // actualColumnsForTable uses PRAGMA table_info to retrieve the real column
 // names that osquery exposes for the given table.
-func actualColumnsForTable(t *testing.T, c *Client, tableName string) map[string]struct{} {
+func actualColumnsForTable(t *testing.T, c *osqueryd.Client, tableName string) map[string]struct{} {
 	t.Helper()
 	rows, _, err := c.Query(context.Background(), "PRAGMA table_info("+tableName+")")
 	if err != nil {
@@ -170,15 +189,12 @@ func actualColumnsForTable(t *testing.T, c *Client, tableName string) map[string
 }
 
 func TestIntegrationAllTableSchemas(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-	defer c.Close()
+	q := newTestQueryer(t)
+	defer q.Close()
 
-	for _, table := range CoreTables {
+	for _, table := range kernel.KernelTables {
 		t.Run(table.Name, func(t *testing.T) {
-			actualCols := actualColumnsForTable(t, c, table.Name)
+			actualCols := actualColumnsForTable(t, q.Client, table.Name)
 
 			declaredCols := daemons.ExtractColumnNames(table.Columns)
 			for _, col := range declaredCols {
@@ -187,9 +203,8 @@ func TestIntegrationAllTableSchemas(t *testing.T) {
 				}
 			}
 
-			rows, queryCols, err := c.Query(context.Background(), "SELECT * FROM "+table.Name+" LIMIT 1")
+			rows, queryCols, err := q.Query(context.Background(), "SELECT * FROM "+table.Name+" LIMIT 1")
 			if err != nil {
-				// Some tables may not have data or may not be queryable on this system
 				t.Logf("SELECT * FROM %s LIMIT 1 returned error (may be acceptable): %v", table.Name, err)
 				return
 			}
@@ -218,13 +233,13 @@ func TestIntegrationAllTableSchemas(t *testing.T) {
 }
 
 func TestIntegrationCoreTablesAreQueryable(t *testing.T) {
-	c, err := NewClient(socketPath(t), startupTimeout, queryTimeout)
+	c, err := osqueryd.NewClient(socketPath(t), startupTimeout, queryTimeout, kernel.KernelTables)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 	defer c.Close()
 
-	for _, table := range CoreTables {
+	for _, table := range kernel.KernelTables {
 		t.Run(table.Name, func(t *testing.T) {
 			rows, _, err := c.Query(context.Background(), "SELECT COUNT(*) AS cnt FROM "+table.Name)
 			if err != nil {
@@ -241,9 +256,9 @@ func TestIntegrationCoreTablesAreQueryable(t *testing.T) {
 }
 
 func TestIntegrationDeriveColumnsConsistency(t *testing.T) {
-	for _, table := range CoreTables {
+	for _, table := range kernel.KernelTables {
 		t.Run(table.Name, func(t *testing.T) {
-			cols := daemons.DeriveColumnsFromSchema("SELECT * FROM "+table.Name, CoreTables)
+			cols := daemons.DeriveColumnsFromSchema("SELECT * FROM "+table.Name, kernel.KernelTables)
 			expected := daemons.ExtractColumnNames(table.Columns)
 			if len(cols) != len(expected) {
 				t.Errorf("DeriveColumnsFromSchema returned %d columns, want %d", len(cols), len(expected))
@@ -259,7 +274,7 @@ func TestIntegrationDeriveColumnsConsistency(t *testing.T) {
 }
 
 func TestIntegrationTableHasDescription(t *testing.T) {
-	for _, table := range CoreTables {
+	for _, table := range kernel.KernelTables {
 		if strings.TrimSpace(table.Description) == "" {
 			t.Errorf("table %q has empty description", table.Name)
 		}
@@ -267,7 +282,7 @@ func TestIntegrationTableHasDescription(t *testing.T) {
 }
 
 func TestIntegrationTableHasName(t *testing.T) {
-	for _, table := range CoreTables {
+	for _, table := range kernel.KernelTables {
 		if strings.TrimSpace(table.Name) == "" {
 			t.Errorf("table with index has empty name")
 		}

@@ -21,7 +21,7 @@ type RunQueryMsg struct {
 type Model struct {
 	Input              textarea.Model // the Bubble Tea text area widget
 	selected           bool
-	active             bool          // true when in insert mode (accepts Ctrl+A)
+	active             bool           // true when in insert mode (accepts Ctrl+A)
 	originalText       lipgloss.Style // saved Text style to restore when deselecting
 	originalCursorLine lipgloss.Style // saved CursorLine style to restore when deselecting
 }
