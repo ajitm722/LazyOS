@@ -40,3 +40,6 @@ terraform.rc
 # Ansible
 inventory.ini
 *.retry
+
+# VHS demo recordings
+vhs/

@@ -1,11 +1,18 @@
 # LazyOS
 
-Visualize, query, and audit your entire OS directly from the terminal.
+Visualize, query, and audit your entire operating system and cloud infrastructure directly from the terminal.
 
-LazyOS is a terminal-based interactive client designed to streamline host visibility and system auditing by bridging the gap between the analytical power of osquery and the ergonomics of a modern text user interface (TUI). Built using the Go Bubble Tea framework, it replaces complex schemas, verbose CLI flags, and manual jq filtering with an intuitive three-pane workspace featuring an active schema browser, a multi-line SQL editor, and a dynamic results inspector.
+LazyOS is a terminal-based interactive client that bridges the analytical power of osquery with a modern Text User Interface (TUI). Built with the Go Bubble Tea framework, it replaces complex schemas, verbose CLI flags, and manual filtering with an intuitive three-pane workspace: a discoverable table browser, a multi-line SQL editor, and a dynamic results inspector. Query kernel tables (processes, users, network), cloud resources (EC2, S3, IAM), or both simultaneously — with results cached in an embedded SQLite store for instant re-querying.
 
-![Main UI](assets/main_ui_ss_holder.png)
-*The three-pane layout: sidebar (left) with discoverable tables, query bar (bottom-right), and results view (top-right).*
+### Kernel Tables
+
+![Kernel demo](assets/demo.gif)
+*Browse kernel tables (processes, users), execute queries with automatic SQLite caching, toggle between line and table modes, and edit SQL in INSERT mode — all with vim-style modal keybindings.*
+
+### Cloud Infrastructure (AWS)
+
+![AWS demo](assets/demo2.gif)
+*Cycle to the AWS backend with `B`, search for tables by name, autofill `SELECT` queries, and inspect cloud resources with the same TUI — EC2, S3, IAM, RDS, ECS, EKS, and more.*
 
 ---
 
@@ -126,7 +133,8 @@ LazyOS provides a `Makefile` that covers building, running, testing, log-watchin
 
 | Target | Purpose |
 |---|---|
-| `make run-sandbox` | **Primary entry point.** Downloads osqueryd, builds the binary, and runs inside an ephemeral sandbox |
+| `make run-sandbox` | **Primary entry point.** Downloads osqueryd, builds binary, and runs inside kernel sandbox |
+| `make run-sandbox-all` | Run sandbox with **both** kernel and AWS cloud backends enabled |
 | `./lazyos-osquery.sh` | Ephemeral evaluation mode — downloads everything to `/tmp`, runs, and wipes all traces on exit |
 | `make run` | Interactive prompt for all config flags (requires an existing osquery daemon) |
 | `make run-with-defaults` | Run immediately with compiled-in defaults (requires an existing osquery daemon) |
@@ -147,7 +155,17 @@ LazyOS provides a `Makefile` that covers building, running, testing, log-watchin
 make run-sandbox
 ```
 
-Downloads an isolated osqueryd (if not already cached in `./build/osquery/`), builds the `lazyos` binary, starts an ephemeral daemon, and launches the TUI — all in one command. The daemon is automatically cleaned up when the application exits.
+Downloads an isolated osqueryd (if not already cached in `./build/osquery/`), builds the `lazyos` binary, starts an ephemeral daemon, and launches the TUI with kernel tables — all in one command. The daemon is automatically cleaned up when the application exits.
+
+To include AWS cloud infrastructure tables alongside kernel tables:
+
+```bash
+make run-sandbox-all
+```
+
+This enables both the `kernel` and `aws` backends, exposing EC2, S3, IAM, RDS, ECS, EKS, and other cloud resource tables via the sidebar. Use `B` to cycle between backends.
+
+> **AWS requires cloudquery** — the AWS tables are provided by the [cloudquery](https://github.com/ajitm722/cloudquery) osquery extension. See the [cloudquery configuration guide](./docs/osquery_interaction.md#cloudquery-cloud-resource-instrumentation) for setup instructions, including AWS credentials, extension registration, and supported tables.
 
 First run:
 
@@ -217,10 +235,11 @@ Configuring LazyOS (press Enter to accept defaults)...
   OSQuery Socket Path [/tmp/osquery.em]:
   Startup Timeout [2s]:
   Query Timeout [10s]:
+  Backends (comma-separated) [kernel]:
   Log File [~/.local/state/lazyos/lazyos.log]:
   Keep Log File? (true/false) [false]:
 
-  Running: lazyos --osquery-socket=/tmp/osquery.em --osquery-startup-timeout=2s --osquery-query-timeout=10s --keep-log=false
+  Running: lazyos --osquery-socket=/tmp/osquery.em --osquery-startup-timeout=2s --osquery-query-timeout=10s --backend kernel --keep-log=false
 ```
 
 ```bash
@@ -240,7 +259,7 @@ make build
 Produces a `lazyos` binary in the project root. Run it manually:
 
 ```bash
-./lazyos --osquery-socket /var/osquery/osquery.em --osquery-startup-timeout 5s --osquery-query-timeout 30s
+./lazyos --osquery-socket /var/osquery/osquery.em --osquery-startup-timeout 5s --osquery-query-timeout 30s --backend kernel
 ```
 
 ### Watching Logs
@@ -271,18 +290,15 @@ make test
 
 ```
 Running tests...
-∅  cmd/lazyos
-∅  internal/config
-∅  internal/daemons/mock
-∅  internal/daemons/osquery
-✓  internal/daemons (cached)
-✓  internal/logger (4ms)
-✓  internal/tui/views/querybar (cached)
-✓  internal/tui/views/sidebar (cached)
-✓  internal/tui/views/results (cached)
-✓  internal/tui (21ms)
+✓  internal/cache
+✓  internal/daemons
+✓  internal/logger
+✓  internal/tui
+✓  internal/tui/views/querybar
+✓  internal/tui/views/results
+✓  internal/tui/views/sidebar
 
-DONE 107 tests in 0.196s
+DONE 116 tests in 0.375s
 ```
 
 ```bash
@@ -299,27 +315,30 @@ make test-coverage
 Running tests with coverage...
 
   Included (unit tests exist):
-    - internal/daemons        (coverage: 100.0%)
-    - internal/logger         (fast, isolated integration — t.TempDir() / t.Setenv())
-    - internal/tui            (coverage: 100.0%)
-    - internal/tui/views/querybar (coverage: 100.0%)
-    - internal/tui/views/results  (coverage: 100.0%)
-    - internal/tui/views/sidebar  (coverage: 100.0%)
+    - internal/cache           (coverage: 98.9%)
+    - internal/daemons         (coverage: 100.0%)
+    - internal/logger          (fast, isolated integration)
+    - internal/tui             (coverage: 97.2%)
+    - internal/tui/views/querybar  (coverage: 100.0%)
+    - internal/tui/views/results   (coverage: 100.0%)
+    - internal/tui/views/sidebar   (coverage: 100.0%)
 
   Omitted (no unit tests):
     - cmd/lazyos              (entry point, no logic to test)
-    - internal/config         (types-only package, no logic)
-    - internal/daemons/mock   (test helpers consumed by other tests)
-    - internal/daemons/osquery    (requires live osquery socket; integration test candidate)
+    - internal/config         (types-only, no logic)
+    - internal/daemons/mock   (test helpers)
+    - internal/daemons/osqueryd   (requires live osquery socket)
+    - internal/store/sqlite   (requires -tags=integration)
 
-✓  internal/daemons (cached) (coverage: 100.0% of statements)
-✓  internal/logger (cached) (coverage: 100.0% of statements)
-✓  internal/tui/views/querybar (cached) (coverage: 100.0% of statements)
-✓  internal/tui/views/sidebar (cached) (coverage: 100.0% of statements)
-✓  internal/tui/views/results (cached) (coverage: 100.0% of statements)
-✓  internal/tui (cached) (coverage: 100.0% of statements)
+✓  internal/cache           (coverage: 98.9%)
+✓  internal/daemons         (coverage: 100.0%)
+✓  internal/logger          (coverage: 100.0%)
+✓  internal/tui/views/querybar  (coverage: 100.0%)
+✓  internal/tui/views/sidebar   (coverage: 100.0%)
+✓  internal/tui/views/results   (coverage: 100.0%)
+✓  internal/tui             (coverage: 97.2%)
 
-DONE 107 tests in 0.007s
+DONE 116 tests in 0.375s
 ```
 
 ```bash
@@ -336,9 +355,9 @@ make test-integration
 
 ```
 Running integration tests...
-✓  internal/daemons/osquery (2.522s)
+✓  internal/daemons/osqueryd (2.358s)
 
-DONE 96 tests in 2.522s
+DONE 93 tests in 2.358s
 Cleaning up sandbox...
 The osquery daemon has been shut down, but the build is cached in ./build/ for faster next runs. Run 'make clean' to remove it.
 ```
