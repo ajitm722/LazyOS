@@ -290,8 +290,8 @@ func TestAutofillHandler(t *testing.T) {
 		if m2.panes.Current() != PaneQuery {
 			t.Errorf("expected PaneQuery after autofill, got %v", m2.panes.Current())
 		}
-		if m2.layout.Querybar.Input.Focused() {
-			t.Error("expected query input blurred after autofill (normal mode)")
+		if !m2.layout.Querybar.Input.Focused() {
+			t.Error("expected query input focused after autofill (normal mode cursor visible)")
 		}
 		want := "SELECT pid, name, path FROM processes LIMIT 10;"
 		if got := m2.layout.Querybar.Input.Value(); got != want {
@@ -310,8 +310,8 @@ func TestAutofillHandler(t *testing.T) {
 		if m2.panes.Current() != PaneQuery {
 			t.Errorf("expected PaneQuery after autofill, got %v", m2.panes.Current())
 		}
-		if m2.layout.Querybar.Input.Focused() {
-			t.Error("expected query input blurred after autofill (normal mode)")
+		if !m2.layout.Querybar.Input.Focused() {
+			t.Error("expected query input focused after autofill (normal mode cursor visible)")
 		}
 		want := "SELECT * FROM processes LIMIT 10;"
 		if got := m2.layout.Querybar.Input.Value(); got != want {

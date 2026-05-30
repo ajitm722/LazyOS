@@ -22,6 +22,7 @@ type Model struct {
 	Input              textarea.Model // the Bubble Tea text area widget
 	selected           bool
 	active             bool           // true when in insert mode (accepts Ctrl+A)
+	normalMode         bool           // true when in normal mode (cursor visible, w/b navigation)
 	originalText       lipgloss.Style // saved Text style to restore when deselecting
 	originalCursorLine lipgloss.Style // saved CursorLine style to restore when deselecting
 }
@@ -38,7 +39,7 @@ func New() Model {
 
 	origText := ta.FocusedStyle.Text
 	origCursorLine := ta.FocusedStyle.CursorLine
-	return Model{Input: ta, originalText: origText, originalCursorLine: origCursorLine}
+	return Model{Input: ta, normalMode: true, originalText: origText, originalCursorLine: origCursorLine}
 }
 
 // Init returns the textarea.Blink command to start the cursor animation.
@@ -51,6 +52,7 @@ func (m Model) Init() tea.Cmd {
 // clean every time insert mode is entered.
 func (m *Model) Focus() tea.Cmd {
 	m.active = true
+	m.normalMode = false
 	m.selected = false
 	m.Input.FocusedStyle.Text = m.originalText
 	m.Input.FocusedStyle.CursorLine = m.originalCursorLine
@@ -61,13 +63,27 @@ func (m *Model) Focus() tea.Cmd {
 // blurs the underlying textarea.
 func (m *Model) Blur() {
 	m.active = false
+	m.normalMode = false
 	m.selected = false
 	m.Input.FocusedStyle.Text = m.originalText
 	m.Input.FocusedStyle.CursorLine = m.originalCursorLine
 	m.Input.Blur()
 }
 
-// Update delegates all messages to the underlying textarea model.
+// EnterNormal puts the querybar into normal mode: the textarea stays focused
+// so the cursor remains visible, but only word-navigation keys (w/b) are
+// processed — text input is blocked.
+func (m *Model) EnterNormal() {
+	m.active = false
+	m.normalMode = true
+	m.selected = false
+	m.Input.FocusedStyle.Text = m.originalText
+	m.Input.FocusedStyle.CursorLine = m.originalCursorLine
+	m.Input.Focus()
+}
+
+// Update dispatches messages to the underlying textarea model. In normal mode
+// only w/b word-navigation keys are processed; all other keys are ignored.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.Input.SetWidth(msg.Width)
@@ -75,6 +91,21 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	if msg, ok := msg.(tea.KeyMsg); ok {
+		// Normal mode: cursor navigation keys; i/Esc handled at app level.
+		if !m.active && m.normalMode {
+			switch {
+			case msg.String() == "w":
+				m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+			case msg.String() == "b":
+				m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyLeft, Alt: true})
+			case msg.String() == "l" || msg.Type == tea.KeyRight:
+				m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyRight})
+			case msg.String() == "h" || msg.Type == tea.KeyLeft:
+				m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyLeft})
+			}
+			return m, nil
+		}
+
 		if !m.active {
 			// ignore all special handling when not in insert mode
 		} else if msg.Type == tea.KeyCtrlA {

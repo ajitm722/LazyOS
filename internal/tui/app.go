@@ -142,7 +142,7 @@ func (m AppModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.mode == InsertMode {
 		if msg.Type == tea.KeyEsc {
 			m.mode = NormalMode
-			m.layout.Querybar.Blur()
+			m.layout.Querybar.EnterNormal()
 			slog.Debug("Switched to NORMAL mode")
 			return m, nil
 		}
@@ -205,7 +205,7 @@ func (m AppModel) handleAutofillMsg(msg AutofillMsg) (tea.Model, tea.Cmd) {
 	slog.Debug("Focus shifting", "from", m.panes.Current(), "to", PaneQuery)
 	m.panes = m.panes.Set(PaneQuery)
 	m.mode = NormalMode
-	m.layout.Querybar.Blur()
+	m.layout.Querybar.EnterNormal()
 	return m, nil
 }
 

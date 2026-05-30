@@ -48,6 +48,9 @@ func TestUpdateQuerybar(t *testing.T) {
 		t.Errorf("expected positive width, got %d", m.Input.Width())
 	}
 
+	// Switch to insert mode so key presses are accepted
+	m.Focus()
+
 	// Test key press
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s', 'e', 'l'}})
 	if m.Input.Value() != "sel" {
@@ -207,5 +210,137 @@ func TestBlur(t *testing.T) {
 	}
 	if m.Input.Focused() {
 		t.Error("expected input not focused after Blur")
+	}
+}
+
+// TestEnterNormal verifies that EnterNormal keeps the textarea focused
+// (cursor visible) but sets active=false and normalMode=true.
+func TestEnterNormal(t *testing.T) {
+	m := New()
+	m.EnterNormal()
+
+	if m.active {
+		t.Error("expected active=false after EnterNormal")
+	}
+	if !m.normalMode {
+		t.Error("expected normalMode=true after EnterNormal")
+	}
+	if !m.Input.Focused() {
+		t.Error("expected input focused after EnterNormal (cursor visible)")
+	}
+}
+
+// TestEnterNormalThenFocus verifies that calling Focus() after EnterNormal()
+// transitions cleanly to insert mode.
+func TestEnterNormalThenFocus(t *testing.T) {
+	m := New()
+	m.Input.SetValue("hello world")
+	m.EnterNormal()
+
+	m.Focus()
+	if !m.active {
+		t.Error("expected active=true after Focus")
+	}
+	if m.normalMode {
+		t.Error("expected normalMode=false after Focus")
+	}
+	if !m.Input.Focused() {
+		t.Error("expected input focused after Focus")
+	}
+}
+
+// TestWordForwardNormalMode verifies that pressing w in normal mode moves the
+// cursor forward by one word.
+func TestWordForwardNormalMode(t *testing.T) {
+	m := New()
+	m.Input.SetValue("hello world foo")
+	m.EnterNormal()
+
+	// Press w — cursor should move from col 0 to after "hello" (col 6, the space)
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	if m2.Input.Value() != "hello world foo" {
+		t.Error("value should not change on word navigation")
+	}
+
+	// Press w again — cursor should move from after "hello " to after "world"
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	if m3.Input.Value() != "hello world foo" {
+		t.Error("value should not change on word navigation")
+	}
+}
+
+// TestWordBackwardNormalMode verifies that pressing b in normal mode moves the
+// cursor backward by one word.
+func TestWordBackwardNormalMode(t *testing.T) {
+	m := New()
+	m.Input.SetValue("hello world foo")
+	m.EnterNormal()
+	m.Input.CursorEnd() // start at the end
+
+	// Press b — cursor should move back to start of "foo" (col 12)
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	if m2.Input.Value() != "hello world foo" {
+		t.Error("value should not change on word navigation")
+	}
+
+	// Press b again — cursor should move back to start of "world" (col 6)
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	if m3.Input.Value() != "hello world foo" {
+		t.Error("value should not change on word navigation")
+	}
+}
+
+// TestIgnoredKeysInNormalMode verifies that regular typing keys are ignored
+// in normal mode — they do not insert characters.
+func TestIgnoredKeysInNormalMode(t *testing.T) {
+	m := New()
+	m.Input.SetValue("hello")
+	m.EnterNormal()
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	if m2.Input.Value() != "hello" {
+		t.Errorf("expected value unchanged in normal mode, got %q", m2.Input.Value())
+	}
+}
+
+// TestCharacterLeftNormalMode verifies that h and left arrow move the cursor
+// left one character in normal mode.
+func TestCharacterLeftNormalMode(t *testing.T) {
+	m := New()
+	m.Input.SetValue("abcde")
+	m.EnterNormal()
+	m.Input.CursorEnd()
+
+	// Press h — cursor should move from col 5 to col 4
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	if m2.Input.Value() != "abcde" {
+		t.Error("value should not change on character navigation")
+	}
+
+	// Press left arrow — cursor should move from col 4 to col 3
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m3.Input.Value() != "abcde" {
+		t.Error("value should not change on character navigation")
+	}
+}
+
+// TestCharacterRightNormalMode verifies that l and right arrow move the cursor
+// right one character in normal mode.
+func TestCharacterRightNormalMode(t *testing.T) {
+	m := New()
+	m.Input.SetValue("abcde")
+	m.EnterNormal()
+	m.Input.CursorStart()
+
+	// Press l — cursor should move from col 0 to col 1
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	if m2.Input.Value() != "abcde" {
+		t.Error("value should not change on character navigation")
+	}
+
+	// Press right arrow — cursor should move from col 1 to col 2
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m3.Input.Value() != "abcde" {
+		t.Error("value should not change on character navigation")
 	}
 }

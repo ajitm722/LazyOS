@@ -45,7 +45,7 @@ Global keybindings dictate layout manipulation, lifecycle events, and window man
 In NORMAL mode, each pane responds to `j` and `k` for vertical movement:
 
 * **Table List (sidebar)**: `j`/`k` scroll through the table list. Press `/` to enter filter mode, which lets you type to narrow the list; `Esc` exits filter mode.
-* **Query Input**: `j`/`k` are not applicable; press `i` to enter INSERT mode for editing.
+* **Query Input**: In NORMAL mode the cursor is visible and `h`/`l`/left/right move one character, `w`/`b` move one word. Press `i` to enter INSERT mode for text editing.
 * **Results (line mode)**: `j`/`k` scroll the viewport up and down.
 * **Results (table mode)**: `j`/`k` move the selection cursor up and down through rows.
 
@@ -56,8 +56,8 @@ Contextual keys defer based on which pane holds the active `focus`.
 * **`a` (Table List Focused)**: Autofills the query bar with a `SELECT <columns> FROM <table> LIMIT 10;` query for the selected table. Focus shifts to the query bar in NORMAL mode.
 * **`e` (Query Input Focused)**: Executes the currently populated SQL query against the local cache. Shortcut after the first access — subsequent queries against the same table are instant.
 * **`E` (Query Input Focused)**: Executes the currently populated SQL query against the upstream source. Authoritative — always fetches fresh data and updates the local cache before returning.
-* **`i` (Query Input Focused, NORMAL mode)**: Enters INSERT mode, allowing text to be typed into the SQL editor. The cursor appears and the mode indicator changes to `-- INSERT --`.
-* **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode, hiding the cursor, restoring command-key behaviour, and clearing any active selection highlight on the query text.
+* **`i` (Query Input Focused, NORMAL mode)**: Enters INSERT mode, allowing text to be typed into the SQL editor. The mode indicator changes to `-- INSERT --`.
+* **`Esc` (Query Input Focused, INSERT mode)**: Returns to NORMAL mode. The cursor remains visible and `h`/`l`/`w`/`b`/arrow keys navigate the query text without modifying it.
 * **Ctrl+A (Query Input Focused, INSERT mode)**: Toggles a "select all" state on the input. When activated, the entire query text is displayed with inverted foreground/background colors (selection highlight). The next key press — a character, space, paste (`Ctrl+V`), Backspace, or Delete — replaces the entire query. Pressing `Ctrl+A` again deactivates the state without altering the text and restores the normal text style.
 
 ## Data Rendering Architecture

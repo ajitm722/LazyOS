@@ -364,7 +364,7 @@ The diagram also shows the two-layer key routing architecture: `handleKeyMsg` fi
 |------|------|-------------------|
 | Cycle action | `internal/tui/actions.go` | `FocusNextAction.Apply(m)` / `FocusPrevAction.Apply(m)` |
 | Focus state | `internal/tui/pane.go` | `PaneManager` struct |
-| Input focus | `internal/tui/views/querybar/input.go` | `querybar.Model.Focus()` / `.Blur()` |
+| Input focus | `internal/tui/views/querybar/input.go` | `querybar.Model.Focus()` / `.Blur()` / `.EnterNormal()` |
 | Render | `internal/tui/app.go` | `AppModel.View()` |
 
 ### Diagram
@@ -397,8 +397,10 @@ sequenceDiagram
             activate Action
             Action->>Action: m.panes = m.panes.Next()
             Note over Action: Cycles: PaneQuery → PaneResults → PaneSidebar → PaneQuery
-            alt new focus is PaneQuery
+            alt new focus is PaneQuery and INSERT mode
                 Action->>Child: Focus()
+            else new focus is PaneQuery and NORMAL mode
+                Action->>Child: EnterNormal()
             else any other pane
                 Action->>Child: Blur()
             end

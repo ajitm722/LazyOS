@@ -41,7 +41,13 @@ func (a FocusNextAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	oldFocus := m.panes.Current()
 	m.panes = m.panes.Next()
 	slog.Debug("Focused next", "from", oldFocus, "to", m.panes.Current())
-	if m.panes.Current() != PaneQuery {
+	if m.panes.Current() == PaneQuery {
+		if m.mode == InsertMode {
+			m.layout.Querybar.Focus()
+		} else {
+			m.layout.Querybar.EnterNormal()
+		}
+	} else {
 		m.layout.Querybar.Blur()
 	}
 	return m, nil
@@ -55,7 +61,13 @@ func (a FocusPrevAction) Apply(m AppModel) (AppModel, tea.Cmd) {
 	oldFocus := m.panes.Current()
 	m.panes = m.panes.Prev()
 	slog.Debug("Focused prev", "from", oldFocus, "to", m.panes.Current())
-	if m.panes.Current() != PaneQuery {
+	if m.panes.Current() == PaneQuery {
+		if m.mode == InsertMode {
+			m.layout.Querybar.Focus()
+		} else {
+			m.layout.Querybar.EnterNormal()
+		}
+	} else {
 		m.layout.Querybar.Blur()
 	}
 	return m, nil
