@@ -145,3 +145,66 @@ func TestLayoutViewInsertMode(t *testing.T) {
 		t.Errorf("expected INSERT mode indicator, got:\n%s", view)
 	}
 }
+
+// TestPaneAt verifies that PaneAt returns the correct PaneID for screen
+// coordinates across a 100×50 terminal layout.
+func TestPaneAt(t *testing.T) {
+	m := newAppModel(&mock.MockQueryer{})
+	// Layout: listW=30, mainHeight=49, inputH=9
+
+	tests := []struct {
+		name string
+		x, y int
+		want PaneID
+	}{
+		{name: "sidebar top-left", x: 5, y: 5, want: PaneSidebar},
+		{name: "sidebar right-edge", x: 27, y: 20, want: PaneSidebar},
+		{name: "querybar top", x: 50, y: 3, want: PaneQuery},
+		{name: "querybar bottom", x: 50, y: 8, want: PaneQuery},
+		{name: "results top", x: 50, y: 10, want: PaneResults},
+		{name: "results middle", x: 50, y: 25, want: PaneResults},
+		{name: "results bottom", x: 50, y: 48, want: PaneResults},
+		{name: "footer line", x: 10, y: 49, want: ""},
+		{name: "negative Y", x: 10, y: -1, want: ""},
+		{name: "right-pane starts at sidebar boundary", x: 28, y: 3, want: PaneQuery},
+		{name: "right-pane starts at sidebar boundary results", x: 28, y: 15, want: PaneResults},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := m.layout.PaneAt(tt.x, tt.y)
+			if got != tt.want {
+				t.Errorf("PaneAt(%d, %d) = %q, want %q", tt.x, tt.y, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestMouseOffset verifies that MouseOffset returns correct content-area
+// offsets for each pane in a 100×50 terminal.
+func TestMouseOffset(t *testing.T) {
+	m := newAppModel(&mock.MockQueryer{})
+	// Layout: listW=30, mainHeight=49, inputH=9
+
+	tests := []struct {
+		name     string
+		pane     PaneID
+		wantOffX int
+		wantOffY int
+	}{
+		{name: "sidebar", pane: PaneSidebar, wantOffX: 1, wantOffY: 1},
+		{name: "querybar", pane: PaneQuery, wantOffX: 33, wantOffY: 1},  // listW(30)+3
+		{name: "results", pane: PaneResults, wantOffX: 33, wantOffY: 10}, // listW(30)+3, inputH(9)+1
+		{name: "unknown pane", pane: PaneID("unknown"), wantOffX: 0, wantOffY: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotX, gotY := m.layout.MouseOffset(tt.pane)
+			if gotX != tt.wantOffX || gotY != tt.wantOffY {
+				t.Errorf("MouseOffset(%q) = (%d, %d), want (%d, %d)",
+					tt.pane, gotX, gotY, tt.wantOffX, tt.wantOffY)
+			}
+		})
+	}
+}

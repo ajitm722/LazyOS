@@ -116,7 +116,7 @@ func runApp(ctx context.Context, cfg config.Config) error {
 
 // startTUI initializes and runs the Bubble Tea application loop.
 func startTUI(ctx context.Context, clients map[string]daemons.Queryer, backendOrder []string, keys config.Keys) error {
-	p := tea.NewProgram(tui.NewApp(clients, backendOrder, keys), tea.WithAltScreen(), tea.WithContext(ctx))
+	p := tea.NewProgram(tui.NewApp(clients, backendOrder, keys), tea.WithAltScreen(), tea.WithContext(ctx), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("tui execution failed: %w", err)
 	}
@@ -192,8 +192,8 @@ func Execute(ctx context.Context) error {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/lazyos/config.yml)")
 
 	rootCmd.Flags().String("osquery-socket", "/tmp/osquery.em", "Path to the osquery extension socket")
-	rootCmd.Flags().Duration("osquery-startup-timeout", 2*time.Second, "Timeout for the initial osquery Thrift connection")
-	rootCmd.Flags().Duration("osquery-query-timeout", 10*time.Second, "Timeout for individual osquery queries")
+	rootCmd.Flags().Duration("osquery-startup-timeout", 10*time.Second, "Timeout for the initial osquery Thrift connection")
+	rootCmd.Flags().Duration("osquery-query-timeout", 100*time.Second, "Timeout for individual osquery queries")
 	rootCmd.Flags().String("log-file", "", "Override default log file path")
 	rootCmd.Flags().Bool("keep-log", false, "Keep the log file after exit")
 	rootCmd.Flags().StringSlice("backend", []string{"kernel"}, "Backends to enable: kernel, aws")

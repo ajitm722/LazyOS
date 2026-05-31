@@ -50,8 +50,9 @@ func TestFocusNavigation(t *testing.T) {
 }
 
 // TestUnhandledMsgFallthrough sends a message type that Update does not
-// recognise (tea.MouseMsg) from each pane to exercise the Update fallthrough
-// to routeToFocused and all three routeToFocused switch branches.
+// recognise (tea.MouseMsg with zero-value button/action) from each pane to
+// exercise the Update fallthrough to routeToFocused and all three
+// routeToFocused switch branches.
 func TestUnhandledMsgFallthrough(t *testing.T) {
 	m := defaultAppModel()
 
@@ -64,6 +65,105 @@ func TestUnhandledMsgFallthrough(t *testing.T) {
 		if m2.panes.Current() != pane {
 			t.Errorf("expected pane %v unchanged after fallthrough, got %v", pane, m2.panes.Current())
 		}
+	}
+}
+
+// TestMouseClickSwitchFocus verifies that a left-click on a different pane
+// switches focus and adjusts the querybar state appropriately.
+func TestMouseClickSwitchFocus(t *testing.T) {
+	// Layout for 100×50: listW=30, sidebarStyleWidth=28, rightPaneStart=28, inputH=9
+	m := defaultAppModel()
+
+	tests := []struct {
+		name      string
+		startPane PaneID
+		clickX    int
+		clickY    int
+		wantPane  PaneID
+	}{
+		{name: "click sidebar from query", startPane: PaneQuery, clickX: 5, clickY: 5, wantPane: PaneSidebar},
+		{name: "click query from sidebar", startPane: PaneSidebar, clickX: 50, clickY: 3, wantPane: PaneQuery},
+		{name: "click results from sidebar", startPane: PaneSidebar, clickX: 50, clickY: 25, wantPane: PaneResults},
+		{name: "click same pane no-op", startPane: PaneQuery, clickX: 50, clickY: 3, wantPane: PaneQuery},
+		{name: "click footer ignored", startPane: PaneQuery, clickX: 10, clickY: 49, wantPane: PaneQuery},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m.panes = m.panes.Set(tt.startPane)
+			msg := tea.MouseMsg(tea.MouseEvent{
+				X:      tt.clickX,
+				Y:      tt.clickY,
+				Button: tea.MouseButtonLeft,
+				Action: tea.MouseActionPress,
+			})
+			m2, _ := updateApp(m, msg)
+
+			if m2.panes.Current() != tt.wantPane {
+				t.Errorf("expected pane %v, got %v", tt.wantPane, m2.panes.Current())
+			}
+		})
+	}
+}
+
+// TestMouseClickQuerybarFocusState verifies that clicking the querybar
+// respects the current mode when focusing.
+func TestMouseClickQuerybarFocusState(t *testing.T) {
+	// Layout for 100×50: listW=30, inputH≈9 — click at (50, 3) hits querybar
+
+	t.Run("normal mode click focuses with EnterNormal", func(t *testing.T) {
+		m := defaultAppModel()
+		m.panes = m.panes.Set(PaneSidebar)
+		m.layout.Querybar.Blur()
+		m.mode = NormalMode
+
+		msg := tea.MouseMsg(tea.MouseEvent{
+			X: 50, Y: 3, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+		})
+		m2, _ := updateApp(m, msg)
+
+		if m2.panes.Current() != PaneQuery {
+			t.Errorf("expected PaneQuery, got %v", m2.panes.Current())
+		}
+		if !m2.layout.Querybar.Input.Focused() {
+			t.Error("expected querybar focused after click in normal mode")
+		}
+	})
+
+	t.Run("insert mode click focuses with Focus", func(t *testing.T) {
+		m := defaultAppModel()
+		m.panes = m.panes.Set(PaneSidebar)
+		m.layout.Querybar.Blur()
+		m.mode = InsertMode
+
+		msg := tea.MouseMsg(tea.MouseEvent{
+			X: 50, Y: 3, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+		})
+		m2, _ := updateApp(m, msg)
+
+		if m2.panes.Current() != PaneQuery {
+			t.Errorf("expected PaneQuery, got %v", m2.panes.Current())
+		}
+		if !m2.layout.Querybar.Input.Focused() {
+			t.Error("expected querybar focused after click in insert mode")
+		}
+	})
+}
+
+// TestMouseWheelDoesNotSwitchFocus verifies that mouse wheel events do not
+// switch pane focus but are still forwarded to the focused pane.
+func TestMouseWheelDoesNotSwitchFocus(t *testing.T) {
+	m := defaultAppModel()
+	m.panes = m.panes.Set(PaneQuery)
+
+	// Wheel up over sidebar
+	msg := tea.MouseMsg(tea.MouseEvent{
+		X: 5, Y: 5, Button: tea.MouseButtonWheelUp, Action: tea.MouseActionPress,
+	})
+	m2, _ := updateApp(m, msg)
+
+	if m2.panes.Current() != PaneQuery {
+		t.Errorf("expected PaneQuery unchanged after wheel event, got %v", m2.panes.Current())
 	}
 }
 

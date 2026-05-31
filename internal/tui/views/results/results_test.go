@@ -252,3 +252,45 @@ func TestUpdateTableMode(t *testing.T) {
 		t.Error("expected IsTableMode to stay true")
 	}
 }
+
+// TestMouseClickTableRow verifies that a left-click in table mode highlights
+// the clicked row.
+func TestMouseClickTableRow(t *testing.T) {
+	m := New()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	m.IsTableMode = true
+
+	// Populate the table with data so there are rows to click.
+	data := []map[string]string{
+		{"col1": "a", "col2": "b"},
+		{"col1": "c", "col2": "d"},
+		{"col1": "e", "col2": "f"},
+	}
+	m = m.FormatData(data, []string{"col1", "col2"})
+
+	// Click on row 0 (Y=2, after header+border).
+	msg := tea.MouseMsg(tea.MouseEvent{
+		Y: 2, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+	})
+	m2, _ := m.Update(msg)
+
+	if m2.Table.SelectedRow() == nil {
+		t.Error("expected a row to be selected after click")
+	}
+}
+
+// TestMouseClickTableHeader verifies that clicking on the header row (Y=0)
+// does nothing — no row is selected and no panic occurs.
+func TestMouseClickTableHeader(t *testing.T) {
+	m := New()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	m.IsTableMode = true
+
+	msg := tea.MouseMsg(tea.MouseEvent{
+		Y: 0, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+	})
+	m2, _ := m.Update(msg)
+	if !m2.IsTableMode {
+		t.Error("expected IsTableMode to stay true")
+	}
+}

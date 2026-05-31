@@ -4,6 +4,7 @@ package querybar
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -82,12 +83,62 @@ func (m *Model) EnterNormal() {
 	m.Input.Focus()
 }
 
+// handleMouseClick positions the text cursor at the click coordinates by
+// navigating to the target line and column.
+func (m Model) handleMouseClick(msg tea.MouseMsg) Model {
+	val := m.Input.Value()
+	if val == "" {
+		return m
+	}
+
+	// Map Y coordinate to a line index (1:1, no soft-wrap accounting).
+	lines := strings.Split(val, "\n")
+	targetRow := msg.Y
+	if targetRow < 0 {
+		targetRow = 0
+	}
+	if targetRow >= len(lines) {
+		targetRow = len(lines) - 1
+	}
+
+	// Navigate to line 0: call CursorUp enough times.
+	for range m.Input.LineCount() {
+		m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyUp})
+	}
+
+	// Navigate to target line.
+	for range targetRow {
+		m.Input, _ = m.Input.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	// Set column on target line (clamped).
+	col := msg.X
+	if col < 0 {
+		col = 0
+	}
+	lineLen := len([]rune(lines[targetRow]))
+	if col > lineLen {
+		col = lineLen
+	}
+	m.Input.SetCursor(col)
+
+	return m
+}
+
 // Update dispatches messages to the underlying textarea model. In normal mode
 // only w/b word-navigation keys are processed; all other keys are ignored.
+// A left-click positions the text cursor at the click coordinates.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.Input.SetWidth(msg.Width)
 		m.Input.SetHeight(msg.Height)
+	}
+
+	if msg, ok := msg.(tea.MouseMsg); ok {
+		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
+			m = m.handleMouseClick(msg)
+			return m, nil
+		}
 	}
 
 	if msg, ok := msg.(tea.KeyMsg); ok {

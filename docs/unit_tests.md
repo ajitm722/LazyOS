@@ -31,7 +31,7 @@ The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which
 | `TestExecuteActionEmptyQuery` | `e` with empty query produces no cmd. | Sends `e` on empty input; nil assertion. |
 | `TestNextBackendSingleBackend` | Single-backend `B` returns immediately without cycling. | Single-backend model; asserts activeBackend unchanged. |
 | `TestAutofillActionWrongPane` | `a` from non-sidebar pane does nothing. | Sends `a` from query pane; nil cmd assertion. |
-| `TestHandleKeyMsgInsertModeEsc` | `Esc` in INSERT mode returns to NORMAL mode. | Sets `m.mode = InsertMode`, sends `KeyEsc`; asserts `NormalMode`. |
+| `TestHandleKeyMsgInsertModeEsc` | `Esc` in INSERT mode returns to NORMAL mode and calls `EnterNormal()` (cursor stays visible). | Sets `m.mode = InsertMode`, sends `KeyEsc`; asserts `NormalMode`. |
 | `TestHandleKeyMsgInsertModeCtrlL` | `Ctrl+L` in INSERT mode cycles the pane. | Sets INSERT mode, sends `KeyCtrlL`; asserts pane changed. |
 | `TestHandleKeyMsgInsertModeRoute` | Non-control keys in INSERT mode preserve the mode. | Sends rune in INSERT mode; asserts mode unchanged. |
 | `TestHandleKeyMsgNormalModeI` | `i` in query pane enters INSERT mode. | Sends `KeyRunes{'i'}` from query pane; asserts `InsertMode`. |
@@ -52,8 +52,11 @@ The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which
 | Test | What it validates | Mechanism |
 |------|-------------------|-----------|
 | `TestFocusNavigation` | Ctrl+L cycles forward and Ctrl+H cycles backward through the three-pane focus order. | Table-driven: 6 subtests covering all transitions. Each sets `startPane`, sends the key, asserts `Current()` and `Input.Focused()`. |
-| `TestUnhandledMsgFallthrough` | Unrecognised message types (e.g. `MouseMsg`) fall through to `routeToFocused` from any pane without producing a cmd. | Sends `tea.MouseMsg{}` from each pane; asserts nil cmd and unchanged pane. |
+| `TestUnhandledMsgFallthrough` | `MouseMsg` with zero-value button/action falls through to `routeToFocused` from any pane without producing a cmd. | Sends `tea.MouseMsg{}` from each pane; asserts nil cmd and unchanged pane. |
 | `TestToggleTable` | Ctrl+N flips `IsTableMode` from false → true → false. | Two sequential `Update` calls with the toggle key; asserts the boolean after each. |
+| `TestMouseClickSwitchFocus` | Left-click on a different pane switches focus; clicking the same pane or footer is a no-op. | 5 subtests with fixed (X,Y) coordinates targeting each pane region; asserts `Current()` after click. |
+| `TestMouseClickQuerybarFocusState` | Clicking the querybar calls `EnterNormal()` in NORMAL mode or `Focus()` in INSERT mode. | Two subtests per mode; asserts `Focused()` and `Current()`. |
+| `TestMouseWheelDoesNotSwitchFocus` | Wheel events do not change pane focus but are forwarded to the focused pane. | Sends wheel event over sidebar while querybar is focused; asserts pane unchanged. |
 
 **Focus cycle** (Ctrl+L):
 ```
@@ -76,7 +79,7 @@ PaneSidebar → PaneResults → PaneQuery → PaneSidebar
 | `TestQueryErrors` | Error display for recognised sentinels and generic errors. | Table-driven with two cases: `daemons.ErrQueryFailed` (displays "query failed") and a plain error (displays the error text verbatim). |
 | `TestEmptyQueryEnter` | Enter on an empty query input produces no cmd. | Pane set to query, no value set; asserts `cmd == nil`. |
 | `TestAutofillTrigger` | Enter on a sidebar item produces `AutofillMsg` with the table name. | Mock provides a schema entry so the sidebar has a selectable item; Enter triggers the sidebar branch of `EnterAction`. |
-| `TestAutofillHandler` | `AutofillMsg` fed directly through `Update` populates the query bar, shifts focus to `PaneQuery`, and focuses the input. | Direct `AutofillMsg` send; asserts query value, pane, and focus state. |
+| `TestAutofillHandler` | `AutofillMsg` fed directly through `Update` populates the query bar, shifts focus to `PaneQuery`, and keeps the input focused (cursor visible in normal mode via `EnterNormal()`). | Direct `AutofillMsg` send; asserts query value, pane, and `Focused()=true`. |
 | `TestQueryZeroRows` | Zero rows with schema produces column headers in table mode. | Mock has `Schema=mock.MockTables` and empty `DefaultResult`; schema-derived columns (`["pid", "name", "state"]`) appear in the table header. |
 | `TestQueryZeroRowsDirect` | `QueryResultMsg` fed directly with explicit columns. | Bypasses mock; feeds `Columns: []string{"pid", "name", "state"}` directly; table header rendered. |
 | `TestQueryZeroRowsNoColumns` | Zero rows with nil columns still produces a valid (headerless) table. | `QueryResultMsg` with nil columns; table renders without panicking. |
@@ -200,6 +203,11 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestCustomDelegateRenderSmallWidth` | Delegate renders non-empty output even at 1-unit width. | List with width=1; delegate render produces output. |
 | `TestCustomDelegateRenderNonTableItem` | Fallback rendering path for non-`TableItem` list items. | `dummyItem` list item; delegate render produces output. |
 | `TestAutofillMsg` | `AutofillMsg` struct stores and exposes `TableName`. | Direct field access assertion. |
+| `TestMouseClickSelect` | Left-click at a Y coordinate within an item row selects that item in the list. | Sends `MouseMsg` at Y=3 (first item area); asserts `Index() == 0`. |
+| `TestMouseDoubleClickAutofill` | Two left-clicks on the same item within 500 ms emit an `AutofillMsg`. | Sends two `MouseMsg` events on same item; executes the returned cmd; type-asserts `AutofillMsg`. |
+| `TestMouseClickOutsideItems` | Clicking above the item area (title region) does not select anything. | Sends `MouseMsg` at Y=0; asserts `Index()` unchanged. |
+| `TestMouseWheelScroll` | Mouse wheel events scroll the list cursor (clamped at boundaries). | Sends `WheelDown` and `WheelUp`; asserts cursor clamped at min/max. |
+| `TestMouseWheelScrollMultiItem` | Wheel scrolling works across multiple items and clamps at boundaries. | Builds 10-item list; sends `WheelDown` (expect index 3), `WheelUp` (expect 0), two more `WheelUp` (still 0). |
 
 ---
 
@@ -222,6 +230,8 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestUpdateTableMode` | Key events in table mode delegate to the table widget. | Sets `IsTableMode=true`, sends `KeyDown`; asserts mode unchanged. |
 | `TestUpdateResultsLineModeJKey` | Pressing `j` in line mode scrolls the viewport down. | Sets content, records YOffset, sends `j`; asserts offset increased. |
 | `TestUpdateResultsLineModeKKey` | Pressing `k` in line mode scrolls the viewport up. | Scrolls down first, sends `k`; asserts offset decreased. |
+| `TestMouseClickTableRow` | Left-click in table mode highlights the clicked data row. | Populates table with 3 rows; sends `MouseMsg` at Y=2 (first row); asserts `SelectedRow() != nil`. |
+| `TestMouseClickTableHeader` | Clicking the header row in table mode is ignored (no panic). | Sends `MouseMsg` at Y=0; asserts `IsTableMode` unchanged. |
 
 ---
 
@@ -231,7 +241,7 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 |------|-------------------|-----------|
 | `TestNewQuerybar` | Correct placeholder text and initial focused state. | Asserts `Placeholder == "SELECT * FROM processes LIMIT 10;"` and `Focused() == true`. |
 | `TestInitQuerybar` | `Init()` returns non-nil `tea.Cmd` for cursor blink. | Direct call; non-nil assertion. |
-| `TestUpdateQuerybar` | Handles `WindowSizeMsg` (dimension propagation) and key rune input. | Sends `WindowSizeMsg{50, 10}`; asserts `Width() > 0`. Sends key runes; asserts `Value() == "sel"`. |
+| `TestUpdateQuerybar` | Handles `WindowSizeMsg` (dimension propagation) and key rune input in insert mode. | Sends `WindowSizeMsg{50,10}`; asserts `Width() > 0`. Switches to insert mode, sends key runes; asserts `Value() == "sel"`. |
 | `TestViewQuerybar` | Returns non-empty view string. | Sets value; calls `View()`; asserts non-empty. |
 | `TestRunQueryMsg` | `RunQueryMsg` stores and exposes the SQL field. | Direct field access assertion. |
 | `TestSelectAll` | Ctrl+A toggles the `selected` flag and applies a visual selection style. | Sends `KeyCtrlA` on a focused model with content; asserts `selected == true` and nil cmd. |
@@ -243,6 +253,15 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestSelectAllThenNonMatchingKey` | Select-all followed by an arrow key deselects without clearing the value. | Ctrl+A → `KeyLeft`; asserts `selected == false` and the original value is preserved. |
 | `TestSelectAllToggleOff` | Pressing Ctrl+A when already selected toggles selection off without clearing the value. | Ctrl+A → Ctrl+A; asserts `selected == false`, value preserved, and non-nil cmd returned. |
 | `TestBlur` | Blur deactivates the querybar, clears focus and selection state. | `Focus()` → `Blur()`; asserts `active`, `selected`, and `Focused()` are false. |
+| `TestEnterNormal` | `EnterNormal()` keeps the textarea focused (cursor visible) but sets `active=false` and `normalMode=true`. | Calls `EnterNormal()`; asserts all three boolean fields. |
+| `TestEnterNormalThenFocus` | `Focus()` after `EnterNormal()` cleanly transitions to insert mode. | `EnterNormal()` → `Focus()`; asserts `active=true`, `normalMode=false`, `Focused()=true`. |
+| `TestWordForwardNormalMode` | Pressing `w` in normal mode moves cursor forward by one word. | Sets value "hello world foo", calls `EnterNormal()`, sends two `w` presses; asserts value unchanged. |
+| `TestWordBackwardNormalMode` | Pressing `b` in normal mode moves cursor backward by one word. | Sets value, `EnterNormal()`, `CursorEnd()`, sends two `b` presses; asserts value unchanged. |
+| `TestIgnoredKeysInNormalMode` | Typing keys in normal mode are ignored — no characters inserted. | Sets value "hello", `EnterNormal()`, sends `KeyRunes{'x'}`; asserts value unchanged. |
+| `TestCharacterLeftNormalMode` | `h` and left arrow move cursor left one character in normal mode. | `CursorEnd()`, sends `h` and `KeyLeft`; asserts value unchanged. |
+| `TestCharacterRightNormalMode` | `l` and right arrow move cursor right one character in normal mode. | `CursorStart()`, sends `l` and `KeyRight`; asserts value unchanged. |
+| `TestMouseClickPositionCursor` | Left-click positions the text cursor at the click column. | Sets value "hello world", `Focus()`, sends mouse click at X=5, types 'X'; asserts "helloX world". |
+| `TestMouseClickPositionCursorMultiLine` | Click-to-position navigates to the correct line and column in multi-line text. | Sets value "abc\ndef\nghi", `Focus()`, clicks at (X=1,Y=1), types 'X'; asserts "abc\ndXef\nghi". |
 
 ---
 

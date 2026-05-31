@@ -75,9 +75,17 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update delegates to either the viewport or the table depending on
-// IsTableMode. In line mode j/k are mapped to scroll down/up.
+// IsTableMode. In line mode j/k are mapped to scroll down/up. In table
+// mode a left-click highlights the clicked row; wheel events scroll.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m = m.handleWindowResize(msg)
+
+	if msg, ok := msg.(tea.MouseMsg); ok {
+		if m.IsTableMode && msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
+			m = m.handleTableClick(msg)
+			return m, nil
+		}
+	}
 
 	if km, ok := msg.(tea.KeyMsg); ok && !m.IsTableMode {
 		switch km.String() {
@@ -97,6 +105,23 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.View, cmd = m.View.Update(msg)
 	}
 	return m, cmd
+}
+
+// handleTableClick maps a mouse Y coordinate to a table row and highlights it.
+// The header occupies 2 rows (column titles + border); data rows start at Y=2.
+func (m Model) handleTableClick(msg tea.MouseMsg) Model {
+	headerRows := 2
+	rowIdx := msg.Y - headerRows
+	if rowIdx < 0 {
+		return m
+	}
+	rows := m.Table.Rows()
+	if rowIdx >= len(rows) {
+		return m
+	}
+	m.Table.GotoTop()
+	m.Table.MoveDown(rowIdx)
+	return m
 }
 
 // handleWindowResize updates pane dimensions and child widget bounds when

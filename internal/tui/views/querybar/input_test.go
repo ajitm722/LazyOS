@@ -344,3 +344,44 @@ func TestCharacterRightNormalMode(t *testing.T) {
 		t.Error("value should not change on character navigation")
 	}
 }
+
+// TestMouseClickPositionCursor verifies that a left-click positions the
+// text cursor at the click column. We verify by inserting a character after
+// the click and checking where it lands.
+func TestMouseClickPositionCursor(t *testing.T) {
+	m := New()
+	m.Input.SetValue("hello world")
+	m.Focus() // insert mode so text input works
+
+	// Click at X=5 (between 'o' and ' ').
+	msg := tea.MouseMsg(tea.MouseEvent{
+		X: 5, Y: 0, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+	})
+	m2, _ := m.Update(msg)
+
+	// Type 'X' at cursor position.
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'X'}})
+	if m3.Input.Value() != "helloX world" {
+		t.Errorf("expected 'helloX world', got %q", m3.Input.Value())
+	}
+}
+
+// TestMouseClickPositionCursorMultiLine verifies click-to-position on a
+// multi-line value navigates to the correct line and column.
+func TestMouseClickPositionCursorMultiLine(t *testing.T) {
+	m := New()
+	m.Input.SetValue("abc\ndef\nghi")
+	m.Focus()
+
+	// Click at line 1 (the "def" line), column 1 (between 'd' and 'e').
+	msg := tea.MouseMsg(tea.MouseEvent{
+		X: 1, Y: 1, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress,
+	})
+	m2, _ := m.Update(msg)
+
+	// Type 'X' at cursor position.
+	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'X'}})
+	if m3.Input.Value() != "abc\ndXef\nghi" {
+		t.Errorf("expected 'abc\\ndXef\\nghi', got %q", m3.Input.Value())
+	}
+}

@@ -146,6 +146,72 @@ func computePaneSizes(width, height int) paneSizes {
 	}
 }
 
+// paneLayout holds the pre-computed axis divisions used by PaneAt and
+// MouseOffset to map screen coordinates to panes.
+type paneLayout struct {
+	listW     int // sidebar width in characters
+	mainH     int // height available for panes (terminal height minus footer)
+	inputH    int // querybar height in characters
+}
+
+// computePaneLayout derives the coordinate divisions from the current terminal
+// size. Returns a zero-valued layout if the terminal is too small.
+func (l Layout) computePaneLayout() paneLayout {
+	if l.tooSmall || l.termWidth == 0 {
+		return paneLayout{}
+	}
+	listW := int(float64(l.termWidth) * sidebarWidthFraction)
+	mainH := l.termHeight - helpBarHeight
+	inputH := int(float64(mainH) * (1.0 - resultsHeightFraction))
+	return paneLayout{listW: listW, mainH: mainH, inputH: inputH}
+}
+
+// PaneAt returns the PaneID at the given screen coordinates (0-indexed
+// character cells). Returns an empty string if the coordinates fall on the
+// footer or outside the pane area.
+func (l Layout) PaneAt(x, y int) PaneID {
+	pl := l.computePaneLayout()
+	if pl.listW == 0 {
+		return PaneSidebar
+	}
+
+	if y < 0 || y >= pl.mainH {
+		return ""
+	}
+
+	// The sidebar style width is listW-2 (RoundedBorder subtracts 2).
+	// Everything to the right of that belongs to the right panes.
+	if x < pl.listW-2 {
+		return PaneSidebar
+	}
+
+	if y < pl.inputH {
+		return PaneQuery
+	}
+
+	return PaneResults
+}
+
+// MouseOffset returns the (x, y) offset of a pane's inner content area
+// relative to the terminal origin. This is used to adjust mouse coordinates
+// before forwarding events to child widgets (subtracting the border).
+func (l Layout) MouseOffset(pane PaneID) (offX, offY int) {
+	pl := l.computePaneLayout()
+
+	switch pane {
+	case PaneSidebar:
+		return 1, 1
+	case PaneQuery:
+		// Right pane starts at listW-2; plus 1 for the querybar border;
+		// plus 2 for internal textarea rendering offset.
+		return pl.listW + 3, 1
+	case PaneResults:
+		return pl.listW + 3, pl.inputH + 1
+	default:
+		return 0, 0
+	}
+}
+
 // paneStylesForFocus returns styles with borders styled for the active pane.
 func paneStylesForFocus(activeFocus PaneID) (list, input, view lipgloss.Style) {
 	list = basePaneStyle

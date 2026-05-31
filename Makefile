@@ -66,10 +66,10 @@ run: ## Run LazyOS interactively, prompting for configuration flags
 	config_path=$${config_path:-}; \
 	read -p "  OSQuery Socket Path [/tmp/osquery.em]: " socket; \
 	socket=$${socket:-/tmp/osquery.em}; \
-	read -p "  Startup Timeout [2s]: " startup_timeout; \
-	startup_timeout=$${startup_timeout:-2s}; \
-	read -p "  Query Timeout [10s]: " query_timeout; \
-	query_timeout=$${query_timeout:-10s}; \
+	read -p "  Startup Timeout [10s]: " startup_timeout; \
+	startup_timeout=$${startup_timeout:-10s}; \
+	read -p "  Query Timeout [100s]: " query_timeout; \
+	query_timeout=$${query_timeout:-100s}; \
 	read -p "  Backends (comma-separated) [kernel]: " backends; \
 	backends=$${backends:-kernel}; \
 	read -p "  Log File [~/.local/state/lazyos/lazyos.log]: " log_file; \

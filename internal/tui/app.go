@@ -107,11 +107,13 @@ func (m AppModel) Init() tea.Cmd {
 }
 
 // Update is the top-level message dispatcher. It routes tea.KeyMsg,
-// tea.WindowSizeMsg, and custom messages to their dedicated handlers.
+// tea.MouseMsg, tea.WindowSizeMsg, and custom messages to their dedicated handlers.
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
+	case tea.MouseMsg:
+		return m.handleMouseMsg(msg)
 	case tea.WindowSizeMsg:
 		return m.handleWindowSizeMsg(msg)
 	case AutofillMsg:
@@ -187,6 +189,43 @@ func (m AppModel) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd
 	var cmd tea.Cmd
 	m.layout, cmd = m.layout.Update(msg)
 	return m, cmd
+}
+
+// handleMouseMsg determines which pane was clicked, switches focus on press,
+// and forwards the mouse event to the focused pane with adjusted coordinates.
+func (m AppModel) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	pane := m.layout.PaneAt(msg.X, msg.Y)
+	if pane == "" {
+		return m, nil
+	}
+
+	// Switch focus on left-click press.
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && pane != m.panes.Current() {
+		m.panes = m.panes.Set(pane)
+		if pane == PaneQuery {
+			if m.mode == InsertMode {
+				m.layout.Querybar.Focus()
+			} else {
+				m.layout.Querybar.EnterNormal()
+			}
+		} else {
+			m.layout.Querybar.Blur()
+		}
+	}
+
+	// Forward the mouse event to the focused pane with adjusted coordinates.
+	offX, offY := m.layout.MouseOffset(m.panes.Current())
+	adjusted := tea.MouseMsg(tea.MouseEvent{
+		X:      msg.X - offX,
+		Y:      msg.Y - offY,
+		Shift:  msg.Shift,
+		Alt:    msg.Alt,
+		Ctrl:   msg.Ctrl,
+		Action: msg.Action,
+		Button: msg.Button,
+	})
+
+	return m.routeToFocused(adjusted)
 }
 
 // handleAutofillMsg is triggered when a user presses Enter on a sidebar

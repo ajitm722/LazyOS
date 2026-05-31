@@ -432,3 +432,74 @@ sequenceDiagram
     deactivate Model
     Runtime->>User: Render updated UI with highlighted pane
 ```
+
+---
+
+## 6. Mouse Event Handling
+
+### Source Files
+
+| Step | File | Key Function / Type |
+|------|------|-------------------|
+| Mouse dispatch | `internal/tui/app.go` | `handleMouseMsg(msg)` |
+| Pane detection | `internal/tui/layout.go` | `Layout.PaneAt(x, y)` |
+| Coordinate offset | `internal/tui/layout.go` | `Layout.MouseOffset(pane)` |
+| Focus switch | `internal/tui/pane.go` | `PaneManager.Set(id)` |
+| Child forward | `internal/tui/app.go` | `routeToFocused(adjustedMsg)` |
+| Sidebar click/wheel | `internal/tui/views/sidebar/sidebar.go` | `itemIndexAt(y)`, `scrollBy(delta)`, double-click → `AutofillMsg` |
+| Querybar click | `internal/tui/views/querybar/input.go` | `handleMouseClick(msg)` |
+| Results table click | `internal/tui/views/results/results.go` | `handleTableClick(msg)` |
+
+### Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Runtime as Bubble Tea
+    participant Model as internal/tui/app.go (Update)
+    participant Handler as internal/tui/app.go (handleMouseMsg)
+    participant Layout as internal/tui/layout.go (Layout)
+    participant Child as internal/tui/views (Active Pane)
+
+    User->>Runtime: Left-click at (X, Y)
+    Runtime->>Model: Update(tea.MouseMsg{X, Y, Left, Press})
+
+    activate Model
+    Model->>Handler: handleMouseMsg(msg)
+    activate Handler
+
+    Handler->>Layout: Layout.PaneAt(msg.X, msg.Y)
+    Layout-->>Handler: PaneID (sidebar / query / results / "")
+
+    alt pane differs from current focus
+        Handler->>Handler: m.panes = m.panes.Set(pane)
+        alt pane is PaneQuery and INSERT mode
+            Handler->>Child: Querybar.Focus()
+        else pane is PaneQuery and NORMAL mode
+            Handler->>Child: Querybar.EnterNormal()
+        else other pane
+            Handler->>Child: Querybar.Blur()
+        end
+    end
+
+    Handler->>Layout: Layout.MouseOffset(m.panes.Current())
+    Layout-->>Handler: (offX, offY)
+
+    Note over Handler: adjusted.Msg{X - offX, Y - offY}
+
+    Handler->>Child: routeToFocused(adjusted.Msg)
+    activate Child
+    Note over Child: Widget handles mouse natively<br/>(list selection, text cursor, scroll)
+    Child-->>Handler: (updated child, tea.Cmd)
+    deactivate Child
+
+    Handler-->>Model: (updated AppModel, tea.Cmd)
+    deactivate Handler
+
+    Model-->>Runtime: (AppModel, tea.Cmd)
+    deactivate Model
+
+    Runtime->>Model: View()
+    Model-->>Runtime: Rendered UI string
+    Runtime->>User: Updated UI with focused pane highlight
+```

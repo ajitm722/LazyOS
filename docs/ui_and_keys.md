@@ -44,10 +44,20 @@ Global keybindings dictate layout manipulation, lifecycle events, and window man
 
 In NORMAL mode, each pane responds to `j` and `k` for vertical movement:
 
-* **Table List (sidebar)**: `j`/`k` scroll through the table list. Press `/` to enter filter mode, which lets you type to narrow the list; `Esc` exits filter mode.
+* **Table List (sidebar)**: `j`/`k` scroll through the table list. Press `/` to enter filter mode, which lets you type to narrow the list; `Esc` exits filter mode. Mouse wheel scrolls the list; left-click selects a table; double-click autofills the query bar with a `SELECT` query for that table.
 * **Query Input**: In NORMAL mode the cursor is visible and `h`/`l`/left/right move one character, `w`/`b` move one word. Press `i` to enter INSERT mode for text editing.
 * **Results (line mode)**: `j`/`k` scroll the viewport up and down.
 * **Results (table mode)**: `j`/`k` move the selection cursor up and down through rows.
+
+### Mouse Support
+
+Mouse interaction is enabled globally via `tea.WithMouseCellMotion()`.
+
+* **Pane focus**: Left-clicking any pane switches focus to that pane. The click event is forwarded to the child widget for native handling.
+* **Sidebar**: Left-click selects a table item. Double-click (same item within 500 ms) autofills the query bar with a `SELECT <columns> FROM <table> LIMIT 10;` query and shifts focus. Mouse wheel scrolls the list cursor up/down by 3 items per tick.
+* **Querybar**: Left-click positions the text cursor at the click coordinates (line and column). Works in both NORMAL and INSERT modes.
+* **Results (table mode)**: Left-click highlights the clicked data row (header clicks are ignored). Mouse wheel events scroll the viewport in line mode.
+* **Results (line mode)**: Mouse wheel scrolls the viewport.
 
 ### Contextual Key Bindings
 
