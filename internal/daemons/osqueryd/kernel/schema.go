@@ -9,6 +9,7 @@ var KernelTables = []daemons.TableSchema{
 	{Name: "process_envs", Description: "Environment variables for running processes.", Columns: "pid, key, value"},
 	{Name: "process_open_files", Description: "File descriptors for each process.", Columns: "pid, fd, path"},
 	{Name: "process_open_sockets", Description: "Network sockets owned by a specific process.", Columns: "pid, fd, socket, family, protocol, local_address, remote_address, local_port, remote_port"},
+	{Name: "process_virtual_memory", Description: "Per-process virtual memory information.", Columns: "pid, vm_peak, vm_size, vm_lock, vm_pin, vm_hwm, vm_rss, vm_data, vm_stack, vm_exe, vm_lib, vm_pte, vm_swap"},
 
 	// Network
 	{Name: "listening_ports", Description: "Ports currently listening on the host.", Columns: "pid, port, protocol, family, address, fd, socket"},
@@ -39,6 +40,7 @@ var KernelTables = []daemons.TableSchema{
 	// System & Packages
 	{Name: "os_version", Description: "A single row containing the operating system name and version.", Columns: "name, version, major, minor, patch, build, platform, platform_like, codename, arch"},
 	{Name: "memory_info", Description: "Main memory information in bytes.", Columns: "memory_total, memory_free, buffers, cached, swap_cached, active, inactive, swap_total, swap_free"},
+	{Name: "virtual_memory_info", Description: "Linux Virtual Memory statistics.", Columns: "free, active, inactive, wired, faults, major_faults, page_ins, page_outs, swap_ins, swap_outs, dirty, writeback, anon_pages, mapped, file_pages, slab, swap_cached, page_tables, unevictable"},
 	{Name: "cpu_time", Description: "System CPU time data.", Columns: "core, user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice"},
 	{Name: "crontab", Description: "Parsed crontab contents.", Columns: "event, minute, hour, day_of_month, month, day_of_week, command, path"},
 	{Name: "iptables", Description: "Linux IP packet filtering and NAT tool.", Columns: "filter_name, chain, policy, target, protocol, src_ip, src_mask, dst_ip, dst_mask, iniface, outiface, match"},

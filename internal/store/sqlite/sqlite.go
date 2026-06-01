@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -101,7 +102,7 @@ func (s *SQLiteStore) SyncTable(name string, columns []string, rows []map[string
 
 	var colDefs []string
 	for _, col := range columns {
-		colDefs = append(colDefs, quoteIdent(col)+" TEXT")
+		colDefs = append(colDefs, quoteIdent(col)+" NUMERIC")
 	}
 	createSQL := "CREATE TABLE " + quoted + " (" + strings.Join(colDefs, ", ") + ")"
 	if _, err := tx.Exec(createSQL); err != nil {
@@ -129,7 +130,7 @@ func (s *SQLiteStore) SyncTable(name string, columns []string, rows []map[string
 	for _, row := range rows {
 		args := make([]interface{}, len(columns))
 		for i, col := range columns {
-			args[i] = row[col]
+			args[i] = parseValue(row[col])
 		}
 		if _, err := stmt.Exec(args...); err != nil {
 			return fmt.Errorf("insert row: %w", err)
@@ -160,4 +161,21 @@ func (s *SQLiteStore) Close() error {
 // double-quote characters.
 func quoteIdent(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// parseValue converts a string value to a numeric Go type when the string
+// represents a lossless integer or float. Numeric values stored in SQLite
+// use INTEGER/REAL storage classes, enabling correct numeric ORDER BY
+// behaviour instead of lexicographic string comparison.
+func parseValue(s string) interface{} {
+	if s == "" {
+		return s
+	}
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return n
+	}
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+	return s
 }

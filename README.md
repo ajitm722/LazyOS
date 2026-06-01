@@ -36,6 +36,7 @@ For more detailed information about the system architecture and internal working
 - [Configuration](./docs/configuration.md) — config file format and available options.
 - [Unit Tests](./docs/unit_tests.md) — test suite organization, mock architecture, and coverage.
 - [Integration Tests](./docs/osquery_integration_test.md) — osquery client integration test suite against a live daemon.
+- [Diagnostic Queries](./docs/diagnostic_queries.md) — use-case-driven query workflows for system observability (virtual memory, and more).
 - [Remote Deployment](./docs/remote_deployment.md) — deploy osqueryd on a remote node and connect LazyOS via SSH socket forwarding, with optional EC2 provisioning via OpenTofu.
 
 ---
@@ -233,13 +234,13 @@ Configuring LazyOS (press Enter to accept defaults)...
 
   Config File [~/.config/lazyos/config.yml]:
   OSQuery Socket Path [/tmp/osquery.em]:
-  Startup Timeout [2s]:
-  Query Timeout [10s]:
+  Startup Timeout [10s]:
+  Query Timeout [100s]:
   Backends (comma-separated) [kernel]:
   Log File [~/.local/state/lazyos/lazyos.log]:
   Keep Log File? (true/false) [false]:
 
-  Running: lazyos --osquery-socket=/tmp/osquery.em --osquery-startup-timeout=2s --osquery-query-timeout=10s --backend kernel --keep-log=false
+  Running: lazyos --osquery-socket=/tmp/osquery.em --osquery-startup-timeout=10s --osquery-query-timeout=100s --backend kernel --keep-log=false
 ```
 
 ```bash

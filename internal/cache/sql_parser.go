@@ -90,9 +90,52 @@ func parseFromClause(lower string, i *int, tables *[]string, seen map[string]boo
 			return
 		}
 
+		// If the next non-whitespace character is '.', this word is a
+		// column qualifier (e.g. "t.id" in an ON clause), not a table name.
+		peekDot := *i
+		for peekDot < n && (lower[peekDot] == ' ' || lower[peekDot] == '\t' || lower[peekDot] == '\n' || lower[peekDot] == '\r') {
+			peekDot++
+		}
+		if peekDot < n && lower[peekDot] == '.' {
+			continue
+		}
+
 		if !seen[word] {
 			*tables = append(*tables, word)
 			seen[word] = true
+		}
+
+		// Peek ahead: skip any table alias. Handles both implicit
+		// ("FROM t1 alias") and explicit ("FROM t1 AS alias") forms.
+		// Aliases that are join keywords (e.g. "ON") or query clause
+		// keywords (e.g. "WHERE") terminate the alias scan and are
+		// handled by subsequent iterations.
+		peek := *i
+		for peek < n && (lower[peek] == ' ' || lower[peek] == '\t' || lower[peek] == '\n' || lower[peek] == '\r') {
+			peek++
+		}
+		if peek < n && isWordChar(lower[peek]) {
+			peekWord := ""
+			for peek < n && isWordChar(lower[peek]) {
+				peekWord += string(lower[peek])
+				peek++
+			}
+			if peekWord == "as" {
+				// Explicit alias: skip "AS" and the alias name that follows.
+				*i = peek
+				for peek < n && (lower[peek] == ' ' || lower[peek] == '\t' || lower[peek] == '\n' || lower[peek] == '\r') {
+					peek++
+				}
+				if peek < n && isWordChar(lower[peek]) {
+					for peek < n && isWordChar(lower[peek]) {
+						peek++
+					}
+				}
+				*i = peek
+			} else if !isJoinWord(peekWord) && !isQueryKeyword(peekWord) {
+				// Implicit alias: skip the alias word.
+				*i = peek
+			}
 		}
 	}
 }

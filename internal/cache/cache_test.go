@@ -33,6 +33,13 @@ func TestExtractTableNames(t *testing.T) {
 		{"", nil},
 		{"SELECT COUNT(*) FROM t", []string{"t"}},
 		{"SELECT 1", nil},
+		// Table aliases (implicit)
+		{"SELECT * FROM t1 t JOIN t2 u ON t.id = u.id", []string{"t1", "t2"}},
+		{"SELECT p.pid FROM processes p JOIN process_virtual_memory v ON p.pid = v.pid", []string{"processes", "process_virtual_memory"}},
+		// Table aliases (explicit AS)
+		{"SELECT * FROM t1 AS t", []string{"t1"}},
+		{"SELECT * FROM t1 AS t, t2 AS u", []string{"t1", "t2"}},
+		{"SELECT * FROM t1 AS t JOIN t2 AS u ON t.id = u.id", []string{"t1", "t2"}},
 	}
 
 	for _, tt := range tests {
