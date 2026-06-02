@@ -99,4 +99,18 @@ var AWSTables = []daemons.TableSchema{
 		Name: "aws_cloudtrail_trail", Description: "CloudTrail trails",
 		Columns: "account_id, region_code, name, s3_bucket_name, is_multi_region_trail, is_organization_trail, log_file_validation_enabled, home_region",
 	},
+
+	// ── Bedrock ───────────────────────────────────────────────────
+	{
+		Name: "aws_bedrock_agent", Description: "Bedrock agents",
+		Columns: "account_id, region_code, agent_id, agent_name, agent_arn, agent_status, description, latest_agent_version, updated_at",
+	},
+	{
+		Name: "aws_bedrock_knowledge_base", Description: "Bedrock knowledge bases",
+		Columns: "account_id, region_code, knowledge_base_id, name, description, status, updated_at",
+	},
+	{
+		Name: "aws_bedrock_agent_action_group", Description: "Bedrock agent action groups",
+		Columns: "account_id, region_code, action_group_id, name, state, description, updated_at",
+	},
 }

@@ -1,4 +1,4 @@
-.PHONY: help build run run-with-defaults run-sandbox-all test test-verbose test-force test-integration test-integration-sqlite test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
+.PHONY: help build run run-with-defaults run-with-defaults-all run-sandbox-all test test-verbose test-force test-integration test-integration-sqlite test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
 
 # Default binary name
 BINARY_NAME=lazyos
@@ -100,6 +100,10 @@ run: ## Run LazyOS interactively, prompting for configuration flags
 run-with-defaults: ## Run LazyOS with default configuration (no prompts)
 	@echo "Running LazyOS with default configuration..."
 	@go run ./cmd/lazyos
+
+run-with-defaults-all: ## Run LazyOS with default configuration and all backends (kernel + aws)
+	@echo "Running LazyOS with default configuration and all backends..."
+	@go run ./cmd/lazyos --backend kernel --backend aws
 
 test: ## Run tests (summary). Logger tests are fast, isolated integration — t.TempDir() + t.Setenv() leave zero state on the host.
 	@echo "Running tests..."
