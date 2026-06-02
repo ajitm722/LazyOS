@@ -100,6 +100,25 @@ func TestFormatData(t *testing.T) {
 		t.Errorf("expected '0 rows returned' message, got %s", m.View.View())
 	}
 
+	// Test word-wrapping in line mode for long values
+	m2 := New()
+	m2.Width = 40
+	m2.Height = 50
+	m2.View.Width = 40
+	m2.View.Height = 50
+
+	cols2 := []string{"col"}
+	data2 := []map[string]string{
+		{"col": "this is a very long value that should wrap across multiple lines"},
+	}
+	m2 = m2.FormatData(data2, cols2)
+	view2 := m2.View.View()
+	// The long value should produce more lines than a single unwrapped line
+	lineCount := len(strings.Split(view2, "\n"))
+	if lineCount <= 4 {
+		t.Errorf("expected wrapped lines > 4, got %d lines for view:\n%s", lineCount, view2)
+	}
+
 	// Test rows but no cols (extraction)
 	dataNoCols := []map[string]string{{"foo": "bar"}}
 	m = m.FormatData(dataNoCols, nil)

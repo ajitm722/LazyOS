@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/muesli/reflow/truncate"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 const (
@@ -34,7 +35,7 @@ func (m Model) FormatData(rowsData []map[string]string, columns []string) Model 
 		return m
 	}
 
-	m.View.SetContent(formatLineMode(keys, rowsData))
+	m.View.SetContent(formatLineMode(keys, rowsData, m.Width))
 	m.View.GotoTop()
 
 	m.Table = m.buildTableMode(keys, rowsData)
@@ -54,8 +55,9 @@ func extractKeys(rowsData []map[string]string) []string {
 }
 
 // formatLineMode renders each row as "--- Row N ---\nkey = value" with
-// aligned padding. This is the default, schema-agnostic view.
-func formatLineMode(keys []string, rowsData []map[string]string) string {
+// aligned padding. Lines that exceed maxWidth are word-wrapped so the
+// full content remains visible inside the viewport.
+func formatLineMode(keys []string, rowsData []map[string]string, maxWidth int) string {
 	var sb strings.Builder
 	sb.Grow(len(rowsData) * 50)
 
@@ -67,7 +69,12 @@ func formatLineMode(keys []string, rowsData []map[string]string) string {
 	for i, rowMap := range rowsData {
 		fmt.Fprintf(&sb, "--- Row %d ---\n", i+1)
 		for _, key := range keys {
-			fmt.Fprintf(&sb, "%-*s = %s\n", maxLen, key, rowMap[key])
+			line := fmt.Sprintf("%-*s = %s", maxLen, key, rowMap[key])
+			if maxWidth > 0 && len(line) > maxWidth {
+				line = wordwrap.String(line, maxWidth)
+			}
+			sb.WriteString(line)
+			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")
 	}
