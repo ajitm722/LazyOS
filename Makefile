@@ -1,7 +1,8 @@
-.PHONY: help build run run-with-defaults run-with-defaults-all run-sandbox-all test test-verbose test-force test-integration test-integration-sqlite test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
+.PHONY: help build build-mcp run run-with-defaults run-with-defaults-all run-sandbox run-sandbox-all run-mcp run-mcp-all run-mcp-sandbox test test-verbose test-force test-integration test-integration-sqlite test-integration-verbose test-coverage test-coverage-html clean format watch-logs clean-default-logs
 
 # Default binary name
 BINARY_NAME=lazyos
+MCP_BINARY_NAME=lazyos-mcp
 
 OSQUERY_BIN := ./build/osquery/osqueryd
 
@@ -37,6 +38,10 @@ build: ## Build the lazyos binary
 	@echo "Building $(BINARY_NAME)..."
 	@go build -o $(BINARY_NAME) ./cmd/lazyos
 
+build-mcp: ## Build the lazyos-mcp binary
+	@echo "Building $(MCP_BINARY_NAME)..."
+	@go build -o $(MCP_BINARY_NAME) ./cmd/lazyos-mcp
+
 run-sandbox: setup-sandbox build ## Run LazyOS in an isolated sandbox with an ephemeral daemon
 	@echo "Launching LazyOS in sandbox (backends: $(BACKENDS))..."
 	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) ./$(BINARY_NAME) --osquery-socket=LAZYOS_TEST_SOCKET $(BACKENDS)
@@ -44,6 +49,22 @@ run-sandbox: setup-sandbox build ## Run LazyOS in an isolated sandbox with an ep
 
 run-sandbox-all: BACKENDS := --backend kernel --backend aws
 run-sandbox-all: run-sandbox ## Run LazyOS sandbox with both kernel and AWS backends enabled
+
+run-mcp: build-mcp ## Run lazyos-mcp locally (127.0.0.1:8080, kernel backend)
+	@echo "Starting lazyos-mcp on http://127.0.0.1:8080/mcp"
+	@echo "  Backends: kernel"
+	@./$(MCP_BINARY_NAME) --host 127.0.0.1 --port 8080 --backend kernel
+
+run-mcp-all: build-mcp ## Run lazyos-mcp on all interfaces with all backends (for Tailscale access)
+	@echo "Starting lazyos-mcp on http://0.0.0.0:8080/mcp"
+	@echo "  Backends: kernel, aws"
+	@echo "  Accessible from Tailscale network"
+	@./$(MCP_BINARY_NAME) --host 0.0.0.0 --port 8080 --backend kernel --backend aws
+
+run-mcp-sandbox: setup-sandbox build-mcp ## Run lazyos-mcp in sandbox with ephemeral osquery daemon
+	@echo "Starting lazyos-mcp in sandbox on http://127.0.0.1:8080/mcp"
+	@echo "  Backends: kernel"
+	@./scripts/osquery_daemon_wrapper.sh $(OSQUERY_BIN) ./$(MCP_BINARY_NAME) --osquery-socket=LAZYOS_TEST_SOCKET --host 127.0.0.1 --port 8080 --backend kernel
 
 test-integration: setup-sandbox ## Run integration tests (summary) against a live, ephemeral osquery daemon
 	@echo "Running integration tests..."

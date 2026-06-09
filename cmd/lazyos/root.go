@@ -15,11 +15,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/ajitm722/LazyOS/internal/bootstrap"
 	"github.com/ajitm722/LazyOS/internal/cache"
 	"github.com/ajitm722/LazyOS/internal/config"
 	"github.com/ajitm722/LazyOS/internal/daemons"
-	"github.com/ajitm722/LazyOS/internal/daemons/osqueryd/aws"
-	"github.com/ajitm722/LazyOS/internal/daemons/osqueryd/kernel"
 	"github.com/ajitm722/LazyOS/internal/logger"
 	"github.com/ajitm722/LazyOS/internal/store/sqlite"
 	"github.com/ajitm722/LazyOS/internal/tui"
@@ -77,7 +76,7 @@ func runApp(ctx context.Context, cfg config.Config) error {
 	}()
 
 	// 2. Initialize Backends
-	clients, backendOrder, err := bootstrapBackends(cfg)
+	clients, backendOrder, err := bootstrap.BootstrapBackends(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap backends: %w", err)
 	}
@@ -121,53 +120,6 @@ func startTUI(ctx context.Context, clients map[string]daemons.Queryer, backendOr
 		return fmt.Errorf("tui execution failed: %w", err)
 	}
 	return nil
-}
-
-// backendInit pairs a flag key with its initializer.
-type backendInit struct {
-	key string
-	fn  func(config.Config) (string, daemons.Queryer, error)
-}
-
-// bootstrapBackends iterates the available initializers, filtered by the
-// --backend flag, and builds a name-to-Queryer map along with an ordered
-// list of backend names for UI cycling.
-func bootstrapBackends(cfg config.Config) (map[string]daemons.Queryer, []string, error) {
-	backends := cfg.Backends
-	if len(backends) == 0 {
-		backends = []string{"kernel"}
-	}
-
-	enabled := make(map[string]bool, len(backends))
-	for _, b := range backends {
-		enabled[strings.ToLower(strings.TrimSpace(b))] = true
-	}
-
-	// available defines the registration order and the mapping from flag
-	// keys to init functions. Adding a new backend is a single entry here.
-	available := []backendInit{
-		{key: "kernel", fn: kernel.InitFromConfig},
-		{key: "aws", fn: aws.InitFromConfig},
-	}
-
-	clients := make(map[string]daemons.Queryer)
-	var order []string
-
-	for _, entry := range available {
-		if !enabled[entry.key] {
-			continue
-		}
-		name, client, err := entry.fn(cfg)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize %s: %w", name, err)
-		}
-		if client != nil && name != "" {
-			clients[name] = client
-			order = append(order, name)
-		}
-	}
-
-	return clients, order, nil
 }
 
 // Execute builds the root Cobra command and starts the application.

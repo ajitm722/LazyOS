@@ -38,6 +38,7 @@ For more detailed information about the system architecture and internal working
 - [Integration Tests](./docs/osquery_integration_test.md) — osquery client integration test suite against a live daemon.
 - [Diagnostic Queries](./docs/diagnostic_queries.md) — index of use-case-driven query workflows for system and cloud audit scenarios.(virtual memory, Agentic AI, etc)
 - [Remote Deployment](./docs/remote_deployment.md) — deploy osqueryd on a remote node and connect LazyOS via SSH socket forwarding, with optional EC2 provisioning via OpenTofu.
+- [MCP Server](./docs/mcp_server.md) — query your osquery and cloud infra from your phone via Tailscale and Termly. OpenCode AI agent discovers tables, inspects schemas, and runs live queries remotely.
 
 ---
 
