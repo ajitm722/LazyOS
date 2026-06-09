@@ -1,16 +1,20 @@
+---
+sidebar_position: 1
+---
+
 # Unit Tests
 
-> For integration tests against a live osquery daemon or SQLite store, see [`osquery_integration_test.md`](./osquery_integration_test.md).
+For integration tests against a live osquery daemon or SQLite store, see [Integration Tests](./integration-tests).
 
 ## Overview
 
 The unit test suite spans the following packages:
 
-* **`internal/cache`** — The `CachedQueryer` decorator and lazy-loading logic. Tests cover the `extractTableNames` SQL parser, nil-store fallthrough paths, store-backed query execution with upstream error propagation, and the source-refresh (`QuerySource`) path.
-* **`internal/daemons`** — The column-helpers test suite, testing `ExtractColumnNames` and `DeriveColumnsFromSchema` — the domain-level column derivation logic that backend implementations rely on for the 0-row fallback.
-* **`internal/logger`** — Fast, isolated integration tests using `t.TempDir()` and `t.Setenv()`.
-* **`internal/tui`** — The Bubble Tea-based UI layer. Tests are white-box (`package tui`, same directory as the code) so they can access unexported helpers like `defaultAppModel`, `focusQuery`, `updateApp`, and `getDefaultBackend`.
-* **`internal/tui/views/results`**, **`internal/tui/views/sidebar`**, **`internal/tui/views/querybar`** — Isolated view-component tests (package-scoped).
+- **`internal/cache`** — The `CachedQueryer` decorator and lazy-loading logic. Tests cover the `extractTableNames` SQL parser, nil-store fallthrough paths, store-backed query execution with upstream error propagation, and the source-refresh (`QuerySource`) path.
+- **`internal/daemons`** — The column-helpers test suite, testing `ExtractColumnNames` and `DeriveColumnsFromSchema` — the domain-level column derivation logic that backend implementations rely on for the 0-row fallback.
+- **`internal/logger`** — Fast, isolated integration tests using `t.TempDir()` and `t.Setenv()`.
+- **`internal/tui`** — The Bubble Tea-based UI layer. Tests are white-box (`package tui`, same directory as the code) so they can access unexported helpers like `defaultAppModel`, `focusQuery`, `updateApp`, and `getDefaultBackend`.
+- **`internal/tui/views/results`**, **`internal/tui/views/sidebar`**, **`internal/tui/views/querybar`** — Isolated view-component tests (package-scoped).
 
 The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which implements the `daemons.Queryer` interface. The `Query` method returns `(rows []map[string]string, columns []string, error)`. Columns are resolved from the first row's map keys when rows > 0 (preserving computed expressions and SELECT aliases) and fall back to `DeriveColumnsFromSchema` when rows == 0. No real osquery socket connection is ever established during testing.
 
@@ -38,23 +42,14 @@ The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which
 | `TestGetDefaultBackendNoKernel` | Fallback when kernel is absent. | Clients map without kernel; asserts first backend chosen. |
 | `TestGetDefaultBackendMissingEntry` | Missing client entries skipped during scan. | Clients map has `"real"` but order has `"missing"` first. |
 
-**Helpers defined here** (available to all test files in the package):
-- `newAppModel(mock)` — model with 100×50 terminal and mock backend.
-- `newAppModelSized(mock, w, h)` — model with custom terminal size and mock backend.
-- `defaultAppModel()` — shorthand for tests needing only a plain model.
-- `focusQuery(m, sql)` — sets pane to `PaneQuery`, fills input, focuses it.
-- `updateApp(m, msg)` — calls `m.Update(msg)` and unwraps the `tea.Model` type assertion.
-
----
-
 ### `app_focus_test.go` — Navigation & Panes
 
 | Test | What it validates | Mechanism |
 |------|-------------------|-----------|
-| `TestFocusNavigation` | Ctrl+L cycles forward and Ctrl+H cycles backward through the three-pane focus order. | Table-driven: 6 subtests covering all transitions. Each sets `startPane`, sends the key, asserts `Current()` and `Input.Focused()`. |
+| `TestFocusNavigation` | Ctrl+L cycles forward and Ctrl+H cycles backward through the three-pane focus order. | Table-driven: 6 subtests covering all transitions. |
 | `TestUnhandledMsgFallthrough` | `MouseMsg` with zero-value button/action falls through to `routeToFocused` from any pane without producing a cmd. | Sends `tea.MouseMsg{}` from each pane; asserts nil cmd and unchanged pane. |
 | `TestToggleTable` | Ctrl+N flips `IsTableMode` from false → true → false. | Two sequential `Update` calls with the toggle key; asserts the boolean after each. |
-| `TestMouseClickSwitchFocus` | Left-click on a different pane switches focus; clicking the same pane or footer is a no-op. | 5 subtests with fixed (X,Y) coordinates targeting each pane region; asserts `Current()` after click. |
+| `TestMouseClickSwitchFocus` | Left-click on a different pane switches focus; clicking the same pane or footer is a no-op. | 5 subtests with fixed (X,Y) coordinates targeting each pane region. |
 | `TestMouseClickQuerybarFocusState` | Clicking the querybar calls `EnterNormal()` in NORMAL mode or `Focus()` in INSERT mode. | Two subtests per mode; asserts `Focused()` and `Current()`. |
 | `TestMouseWheelDoesNotSwitchFocus` | Wheel events do not change pane focus but are forwarded to the focused pane. | Sends wheel event over sidebar while querybar is focused; asserts pane unchanged. |
 
@@ -68,58 +63,28 @@ PaneSidebar → PaneQuery → PaneResults → PaneSidebar
 PaneSidebar → PaneResults → PaneQuery → PaneSidebar
 ```
 
----
-
 ### `app_query_test.go` — Query Dispatch & Daemon Interaction
 
 | Test | What it validates | Mechanism |
 |------|-------------------|-----------|
-| `TestQueryDispatchStandard` | Full query pipeline: Enter → `RunQueryMsg` → backend call → `QueryResultMsg` → results displayed in viewport. | Each step of the Bubble Tea message loop is manually unwound: cmd is executed, its return is fed back through `Update`. Asserts message types, row count, pane transition to `PaneResults`, and viewport content. |
-| `TestQueryTimeout` | Backend-level timeout enforcement via mock's internal timeout (no real waiting). | Runs inside `synctest.Test`. Mock has `InternalTimeout=3s`, `SlowDuration=5s`. Mock wraps ctx with `context.WithTimeout`, then selects on its Done() vs `time.After(5s)`. Synctest advances both timers; the 3s deadline fires first. |
-| `TestQueryErrors` | Error display for recognised sentinels and generic errors. | Table-driven with two cases: `daemons.ErrQueryFailed` (displays "query failed") and a plain error (displays the error text verbatim). |
+| `TestQueryDispatchStandard` | Full query pipeline: Enter → `RunQueryMsg` → backend call → `QueryResultMsg` → results displayed in viewport. | Each step of the Bubble Tea message loop is manually unwound. |
+| `TestQueryTimeout` | Backend-level timeout enforcement via mock's internal timeout (no real waiting). | Runs inside `synctest.Test`. Mock has `InternalTimeout=3s`, `SlowDuration=5s`. |
+| `TestQueryErrors` | Error display for recognised sentinels and generic errors. | Table-driven with two cases: `daemons.ErrQueryFailed` and a plain error. |
 | `TestEmptyQueryEnter` | Enter on an empty query input produces no cmd. | Pane set to query, no value set; asserts `cmd == nil`. |
-| `TestAutofillTrigger` | Enter on a sidebar item produces `AutofillMsg` with the table name. | Mock provides a schema entry so the sidebar has a selectable item; Enter triggers the sidebar branch of `EnterAction`. |
-| `TestAutofillHandler` | `AutofillMsg` fed directly through `Update` populates the query bar, shifts focus to `PaneQuery`, and keeps the input focused (cursor visible in normal mode via `EnterNormal()`). | Direct `AutofillMsg` send; asserts query value, pane, and `Focused()=true`. |
-| `TestQueryZeroRows` | Zero rows with schema produces column headers in table mode. | Mock has `Schema=mock.MockTables` and empty `DefaultResult`; schema-derived columns (`["pid", "name", "state"]`) appear in the table header. |
-| `TestQueryZeroRowsDirect` | `QueryResultMsg` fed directly with explicit columns. | Bypasses mock; feeds `Columns: []string{"pid", "name", "state"}` directly; table header rendered. |
+| `TestAutofillTrigger` | Enter on a sidebar item produces `AutofillMsg` with the table name. | Mock provides a schema entry so the sidebar has a selectable item. |
+| `TestAutofillHandler` | `AutofillMsg` fed directly through `Update` populates the query bar, shifts focus to `PaneQuery`, and keeps the input focused. | Direct `AutofillMsg` send; asserts query value, pane, and `Focused()=true`. |
+| `TestQueryZeroRows` | Zero rows with schema produces column headers in table mode. | Mock has `Schema=mock.MockTables` and empty `DefaultResult`. |
+| `TestQueryZeroRowsDirect` | `QueryResultMsg` fed directly with explicit columns. | Bypasses mock; feeds `Columns` directly; table header rendered. |
 | `TestQueryZeroRowsNoColumns` | Zero rows with nil columns still produces a valid (headerless) table. | `QueryResultMsg` with nil columns; table renders without panicking. |
-| `TestQueryZeroRowsFallbackNilColumns` | Full mock pipeline returns nil columns (no schema, no rows); results view still renders gracefully without panicking. | Mock without `Schema` and empty `DefaultResult`; line mode shows "0 rows returned."; table mode renders headers. |
-| `TestQueryZeroRowsFromSchema` | Zero rows, no row-level columns, but schema provides column derivation. | Mock has `Schema` with `processes` table; columns derived from schema via `DeriveColumnsFromSchema`; table headers appear in schema order (`pid` before `name`). |
-| `TestQueryHeaderOrder` | Table column headers appear in schema-defined order, not map-iteration order. | Row data has keys in reverse order (`state`, `name`, `pid`); schema order (`pid`, `name`, `path`, `cmdline`, `state`) is verified in both `columns` slice and rendered table. |
-
-**Pipeline flow** (standard dispatch):
-```
-KeyMsg(Enter) → EnterAction.Apply → cmd → RunQueryMsg
-                                                     ↓
-                                              handleRunQueryMsg → cmd → mock.Query
-                                                                           ↓
-                                              QueryResultMsg ← cmd ←  rows returned
-                                                     ↓
-                                              handleQueryResultMsg → PaneResults, viewport populated
-```
-
-**Pipeline flow** (timeout):
-```
-mock.InternalTimeout=3s, mock.SlowDuration=5s
-                                ↓
-                mock.Query wraps ctx with context.WithTimeout(ctx, 3s)
-                                ↓
-                mock.Query enters select{timeoutCtx.Done(), time.After(5s)}
-                                ↓ (synctest advances clock; 3s deadline fires first)
-                     timeoutCtx.Done() → returns ErrQueryTimeout
-                                ↓
-                          QueryErrorMsg{Err: ErrQueryTimeout}
-                                ↓
-                          handleQueryErrorMsg → "query timed out" in viewport
-```
-
----
+| `TestQueryZeroRowsFallbackNilColumns` | Full mock pipeline returns nil columns (no schema, no rows); results view still renders gracefully. | Mock without `Schema` and empty `DefaultResult`. |
+| `TestQueryZeroRowsFromSchema` | Zero rows, no row-level columns, but schema provides column derivation. | Mock has `Schema` with `processes` table; columns derived from schema. |
+| `TestQueryHeaderOrder` | Table column headers appear in schema-defined order, not map-iteration order. | Row data has keys in reverse order; schema order is verified. |
 
 ### `app_keys_test.go` — Key Bindings & Configuration
 
 | Test | What it validates | Mechanism |
 |------|-------------------|-----------|
-| `TestKeyBindingOverride` | Custom key overrides rewire the ActionRegistry correctly. | Config remaps ToggleTable to Ctrl+T and FocusNext to Ctrl+N. Table-driven: each key matched via `key.Matches` and action type compared with `reflect.TypeOf`. Separate subtest asserts Ctrl+N does not match ToggleTable. |
+| `TestKeyBindingOverride` | Custom key overrides rewire the ActionRegistry correctly. | Config remaps ToggleTable to Ctrl+T and FocusNext to Ctrl+N. |
 | `TestUnmatchedKey` | A plain 'a' rune (no binding) falls through to `routeToFocused` with no cmd. | Sends `KeyRunes{'a'}`; asserts nil cmd and unchanged pane. |
 | `TestShortHelp` | `ShortHelp()` returns all registered bindings with non-empty help keys. | Asserts non-empty result; checks each binding's `Help().Key`. |
 | `TestFullHelp` | `FullHelp()` returns at least one row. | Asserts non-empty slice. |
@@ -135,21 +100,18 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `execute_source` | `E` | `ExecuteSourceAction` |
 | `quit` | `q` | `QuitAction` |
 
----
-
 ### `layout_test.go` — Layout Math & Rendering
 
 | Test | What it validates | Mechanism |
 |------|-------------------|-----------|
-| `TestComputePaneBounds` | Fractional pane dimension math for 6 terminal sizes. | Table-driven: 30% sidebar, 70% main view, 80/20 vertical split, minus `paneContentInset` and `helpBarHeight`. |
-| `TestLayoutTooSmall` | Terminal below 80×24 triggers `tooSmall` flag and warning rendering. | Sends `WindowSizeMsg{50,10}`; asserts `tooSmall` and "Terminal too small" in `View()`. |
-| `TestLayoutViewRenders` | View produces non-empty output for all three focus states and help bar is present. | Calls `Layout.View()` with each `PaneID` value; checks non-empty and help-text substrings. |
+| `TestComputePaneBounds` | Fractional pane dimension math for 6 terminal sizes. | Table-driven: 30% sidebar, 70% main view, 80/20 vertical split. |
+| `TestLayoutTooSmall` | Terminal below 80×24 triggers `tooSmall` flag and warning rendering. | Sends `WindowSizeMsg{50,10}`; asserts `tooSmall`. |
+| `TestLayoutViewRenders` | View produces non-empty output for all three focus states and help bar is present. | Calls `Layout.View()` with each `PaneID` value. |
 | `TestLayoutViewInsertMode` | View renders the INSERT mode indicator when mode is InsertMode. | Sets `m.mode = InsertMode`; asserts "INSERT" in view string. |
 | `TestRenderTooSmallWarning` | Pure `renderTooSmallWarning` function produces the warning string. | Direct function call; substring check. |
-| `TestComputePaneSizes` | Outer dimension calculation yields positive widths at 100×50. | Direct function call; sanity checks on `listWidth`, `viewWidth`, `inputWidth`. |
+| `TestComputePaneSizes` | Outer dimension calculation yields positive widths at 100×50. | Direct function call; sanity checks. |
 
 **Pane dimension formulas**:
-
 | Variable | Formula |
 |----------|---------|
 | `mainHeight` | `max(0, height − helpBarHeight)` |
@@ -160,8 +122,6 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `queryHeight` | `max(0, int(mainHeight × 0.2) − paneContentInset)` |
 
 **Constants**: `helpBarHeight = 1`, `paneContentInset = 4`, `sidebarWidthFraction = 0.3`, `resultsWidthFraction = 0.7`, `resultsHeightFraction = 0.8`, `minRequiredWidth = 80`, `minRequiredHeight = 24`.
-
----
 
 ### `cache_test.go` — Cached Query Decorator (`internal/cache`)
 
@@ -175,12 +135,10 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestCachedQueryer_WithSchema` | GetSchema returns upstream schema. | Mock schema; asserts returned schema matches. |
 | `TestCachedQueryer_Close` | Close delegates to upstream. | Mock upstream; asserts no error. |
 | `TestCachedQueryer_Query_WithStore` | Query lazy-loads an uncached table from upstream into the store. | Real SQLite store + mock; asserts table is cached after query. |
-| `TestCachedQueryer_Query_AlreadyCached` | Second query against same table reads from store, not upstream. | Real store seeded with stale data; asserts stale data returned (proves upstream not called). |
+| `TestCachedQueryer_Query_AlreadyCached` | Second query against same table reads from store, not upstream. | Real store seeded with stale data; asserts stale data returned. |
 | `TestCachedQueryer_QuerySource_WithStore` | QuerySource refreshes from upstream and overwrites the store. | Real store seeded with stale data; asserts fresh data returned. |
 | `TestCachedQueryer_Query_UpstreamError` | Query propagates fetch error when lazy-loading fails. | Real store + failing mock; asserts error from Query. |
 | `TestCachedQueryer_QuerySource_UpstreamError` | QuerySource propagates fetch error. | Real store + failing mock; asserts error from QuerySource. |
-
----
 
 ### `columns_test.go` — Column Helper Functions (`internal/daemons`)
 
@@ -189,8 +147,6 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestExtractColumnNames` | Parses comma-separated column definitions with optional type annotations into a slice of column-name strings. | Table-driven: standard, type-less, single-column, and empty inputs. |
 | `TestAutofillColumns` | Returns a comma-separated column string for a matching table, `"*"` when not found, matching case-insensitively, and `"*"` for an empty schema. | Table-driven: table found, not found, case-insensitive, empty schema. |
 | `TestDeriveColumnsFromSchema` | Looks up the `FROM` table in the schema catalog and returns ordered column names. | Table-driven: simple SELECT, WHERE clause, lowercase table, no FROM clause, unknown table, empty schema. |
-
----
 
 ### `sidebar_test.go` — Sidebar View (`internal/tui/views/sidebar`)
 
@@ -209,8 +165,6 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestMouseWheelScroll` | Mouse wheel events scroll the list cursor (clamped at boundaries). | Sends `WheelDown` and `WheelUp`; asserts cursor clamped at min/max. |
 | `TestMouseWheelScrollMultiItem` | Wheel scrolling works across multiple items and clamps at boundaries. | Builds 10-item list; sends `WheelDown` (expect index 3), `WheelUp` (expect 0), two more `WheelUp` (still 0). |
 
----
-
 ### `results_test.go` — Results View (`internal/tui/views/results`)
 
 | Test | What it validates | Mechanism |
@@ -225,15 +179,13 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 | `TestComputeTableLayout` | Produces correct key count and positive column width. | Direct call with 3 columns; assertions on `keys` length and `colWidth`. |
 | `TestComputeTableLayoutManyCols` | Truncates columns to 1 when width forces `maxCols = 1`. | Width=20 (20/17=1); asserts 1 key. |
 | `TestExtractKeysEmpty` | Returns nil for nil input rows. | Direct call; nil assertion. |
-| `TestBuildRowsTruncationSmallWidth` | Cell values truncated without ellipsis when column width <= 3. | Width=2; cell length <= colWidth; no ellipsis. |
-| `TestBuildRowsTruncationLargeWidth` | Cell values truncated with ellipsis when column width > 3. | Width=5; cell length <= colWidth; ellipsis applied. |
+| `TestBuildRowsTruncationSmallWidth` | Cell values truncated without ellipsis when column width `<= 3`. | Width=2; cell length `<= colWidth`; no ellipsis. |
+| `TestBuildRowsTruncationLargeWidth` | Cell values truncated with ellipsis when column width `> 3`. | Width=5; cell length `<= colWidth`; ellipsis applied. |
 | `TestUpdateTableMode` | Key events in table mode delegate to the table widget. | Sets `IsTableMode=true`, sends `KeyDown`; asserts mode unchanged. |
 | `TestUpdateResultsLineModeJKey` | Pressing `j` in line mode scrolls the viewport down. | Sets content, records YOffset, sends `j`; asserts offset increased. |
 | `TestUpdateResultsLineModeKKey` | Pressing `k` in line mode scrolls the viewport up. | Scrolls down first, sends `k`; asserts offset decreased. |
 | `TestMouseClickTableRow` | Left-click in table mode highlights the clicked data row. | Populates table with 3 rows; sends `MouseMsg` at Y=2 (first row); asserts `SelectedRow() != nil`. |
 | `TestMouseClickTableHeader` | Clicking the header row in table mode is ignored (no panic). | Sends `MouseMsg` at Y=0; asserts `IsTableMode` unchanged. |
-
----
 
 ### `input_test.go` — Query Bar Input (`internal/tui/views/querybar`)
 
@@ -270,7 +222,7 @@ mock.InternalTimeout=3s, mock.SlowDuration=5s
 ```
 internal/daemons/mock/
   client.go   -- MockQueryer (implements daemons.Queryer)
-  schema.go    -- MockTables (canonical mock schema catalog)
+  schema.go   -- MockTables (canonical mock schema catalog)
 ```
 
 `MockQueryer` implements `Query`, `Close`, and `GetSchema`. Fields:
@@ -285,11 +237,7 @@ internal/daemons/mock/
 | `InternalTimeout` | `time.Duration` | If set, wraps `ctx` with `context.WithTimeout` before selecting, mirroring the real osquery client's behavior. |
 | `Schema` | `[]daemons.TableSchema` | Used by `GetSchema()` and internally by `Query` for column derivation and row filtering. |
 
-**Column resolution**: `MockQueryer.Query` resolves columns from the first row's map keys when rows > 0, preserving computed expressions and SELECT aliases exactly as returned. When rows == 0, it falls back to `daemons.DeriveColumnsFromSchema(sql, m.Schema)` so the TUI can render column headers with no data.
-
-**Schema catalog** (`schema.go`): `MockTables` defines the canonical schemas used in tests (tables `processes`, `users`, `empty`). Tests that need to verify column ordering or zero-row behavior set `Schema: mock.MockTables`.
-
-The mock lives under `internal/daemons/mock/` and is only imported by `_test.go` files, so it is never compiled into the final binary. Verified via `go list -deps ./cmd/lazyos`.
+The mock lives under `internal/daemons/mock/` and is only imported by `_test.go` files, so it is never compiled into the final binary.
 
 ---
 
@@ -325,6 +273,6 @@ The entire test completes in near-zero real time.
 - `internal/daemons/osqueryd` — integration-only (requires live osquery socket).
 - `internal/daemons/osqueryd/aws` — integration-only (requires live osquery socket + cloudquery).
 - `internal/daemons/osqueryd/kernel` — integration-only (requires live osquery socket).
-- `internal/store/sqlite` — integration-only (requires `-tags=integration`; see [`osquery_integration_test.md`](./osquery_integration_test.md)).
+- `internal/store/sqlite` — integration-only (requires `-tags=integration`; see [Integration Tests](./integration-tests)).
 
 Overall unit-test statement coverage: **98.6%**.

@@ -1,4 +1,8 @@
-# MCP Server: AI-Native Osquery Access
+---
+sidebar_position: 2
+---
+
+# MCP Server
 
 This document describes the `lazyos-mcp` binary, a Model Context Protocol (MCP) server that exposes the full osquery table catalog and query engine to AI agents over standard HTTP. Through the MCP interface, AI agents can discover available tables, inspect schemas, and execute SQL queries against the live osquery daemon — all over a structured, protocol-driven interface.
 
@@ -258,7 +262,7 @@ The images below demonstrate `lazyos-mcp` accessed from a mobile device over a T
 
 | Query via OpenCode on Termly | Phone session overview |
 |:---:|:---:|
-| ![EC2 query on phone via Termly](../assets/mcp_working_ec2_question.png) | ![Phone session showing the MCP interaction](../assets/mcp_phone_counterpart.jpeg) |
+| ![EC2 query on phone via Termly](/img/mcp_working_ec2_question.png) | ![Phone session showing the MCP interaction](/img/mcp_phone_counterpart.jpeg) |
 | *The AI agent answering the question* | *The phone running the Termly session* |
 
 This workflow requires no port forwarding, no public DNS, and no TLS certificates — Tailscale WireGuard handles routing, authentication, and encryption. The MCP server binds to `0.0.0.0:8080` and accepts connections from any device on the tailnet.

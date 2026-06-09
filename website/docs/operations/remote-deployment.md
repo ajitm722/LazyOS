@@ -1,4 +1,8 @@
-# Provision osquery on a Remote Node and Connect with LazyOS
+---
+sidebar_position: 1
+---
+
+# Remote Deployment
 
 This guide walks through deploying osqueryd on a remote Linux machine, configuring it to expose a known socket path, and connecting LazyOS to it via SSH socket forwarding — with zero code changes to the Go application.
 
@@ -144,7 +148,7 @@ ansible-playbook -i inventory.ini playbook.yml -u ubuntu --key-file ~/.ssh/lazyo
 ansible-playbook -i inventory.ini playbook.yml -u <ssh-user> --key-file ~/.ssh/your-key
 ```
 
-![Ansible playbook execution](../assets/ansi_script_exec.png)
+![Ansible playbook execution](/img/ansi_script_exec.png)
 *Successful execution of the Ansible playbook, automatically configuring and starting osqueryd on the remote node.*
 
 The playbook performs the following steps:
@@ -246,15 +250,15 @@ Once connected, execute queries against the remote host directly from the TUI.
 
 This works on any Linux machine with SSH access. The role auto-detects the CPU architecture and falls back to a tarball installation when no osquery apt repository is available for that architecture:
 
-![SSH into a Raspberry Pi 5 running Ubuntu 24.04](../assets/raspberrypi5_ssh.png)
+![SSH into a Raspberry Pi 5 running Ubuntu 24.04](/img/raspberrypi5_ssh.png)
 *SSH connectivity to a Raspberry Pi 5 — the role installs osqueryd from the official aarch64 tarball when no apt repo exists for that platform.*
 
 Once the instance is reachable, an AI agent like [opencode](https://opencode.ai) can generate osquery SQL tailored to your EC2 infrastructure. Describe what you need in plain English:
 
-![Asking opencode about EC2 instance metadata](../assets/aws_ec2_AIagent_query.png)
+![Asking opencode about EC2 instance metadata](/img/aws_ec2_AIagent_query.png)
 *Prompting an AI agent with a natural-language request about the provisioned AWS EC2 instance.*
 
-![opencode generates the EC2 query](../assets/aws_ec2_AIagent_response.png)
+![opencode generates the EC2 query](/img/aws_ec2_AIagent_response.png)
 *The agent responds with the osquery SQL — paste it directly into LazyOS to execute against the remote node.*
 
 ---
@@ -324,8 +328,6 @@ Verify the tunnel process is gone:
 ps aux | grep 'ssh.*lazyos' | grep -v grep
 # should print nothing — the grep -v filters out the grep command itself
 ```
-
-> If anything still appears (like a LazyOS process), it means the application is still running — see Step 1.
 
 ### 3. Remove the Local Socket File
 

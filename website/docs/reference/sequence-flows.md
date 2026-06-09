@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # Sequence Flows
 
 The following sequence diagrams detail the internal data flow and component interactions within the `tui` package during key user operations. Each diagram is annotated with the exact source files that make the flow work, enabling a developer to trace every message from the terminal to the caching layer and the upstream daemon.
@@ -347,8 +351,6 @@ sequenceDiagram
     deactivate Model
     Runtime->>Runtime: Draw to alternate screen buffer
 ```
-
----
 
 ---
 

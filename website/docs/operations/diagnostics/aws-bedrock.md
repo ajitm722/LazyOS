@@ -1,4 +1,8 @@
-# AWS Bedrock Tables
+---
+sidebar_position: 3
+---
+
+# AWS Bedrock Audit
 
 Amazon Bedrock is a managed service that provides access to foundation models from leading AI companies through a unified API. Bedrock also includes capabilities for building AI agents, curating knowledge bases for Retrieval-Augmented Generation (RAG), and defining action groups that connect agents to external APIs and business logic. LazyOS surfaces Bedrock resources — agents, knowledge bases, and action groups — as queryable osquery tables, enabling security and compliance audits across AI infrastructure.
 
@@ -8,8 +12,7 @@ Amazon Bedrock is a managed service that provides access to foundation models fr
 
 The `aws_bedrock_agent` table enumerates all Bedrock agents deployed across an AWS account. Each row represents a single agent with its identity, lifecycle status, version, and description. The `agent_status` distinguishes between active, preparing, and failed deployments. The `latest_agent_version` column tracks the most recently published agent revision.
 
-![Bedrock agents query in LazyOS](../assets/bedrock_agent.png)
-
+![Bedrock agents query in LazyOS](/img/bedrock_agent.png)
 *The `aws_bedrock_agent` table queried in LazyOS, showing all Bedrock agents with their status, ARN, version, and description columns.*
 
 ---
@@ -18,8 +21,7 @@ The `aws_bedrock_agent` table enumerates all Bedrock agents deployed across an A
 
 The `aws_bedrock_knowledge_base` table lists every knowledge base configured in Bedrock. Knowledge bases index documents — stored in S3 or other data sources — and make them available to foundation models via RAG. The `status` column reports the operational state (`ACTIVE`, `CREATING`, `DELETING`). The `updated_at` timestamp helps identify stale or abandoned knowledge bases that may contain outdated source material.
 
-![Bedrock knowledge bases query in LazyOS](../assets/bedrock_knowledge_base.png)
-
+![Bedrock knowledge bases query in LazyOS](/img/bedrock_knowledge_base.png)
 *The `aws_bedrock_knowledge_base` table queried in LazyOS, displaying all knowledge bases with their status, name, and update timestamps.*
 
 ---
@@ -28,17 +30,14 @@ The `aws_bedrock_knowledge_base` table lists every knowledge base configured in 
 
 The `aws_bedrock_agent_action_group` table exposes the action groups attached to Bedrock agents. Action groups define the tools an agent can invoke — Lambda functions, API schemas, or custom business logic — that execute when a model determines an action is needed during a conversation. The `state` column indicates whether the action group is `ENABLED` or `DISABLED`. This table is essential for auditing which external capabilities are wired into each AI agent.
 
-![Bedrock agent action groups query in LazyOS](../assets/bedrock_action_group.png)
-
+![Bedrock agent action groups query in LazyOS](/img/bedrock_action_group.png)
 *The `aws_bedrock_agent_action_group` table queried in LazyOS, showing all action groups with their name, state, description, and update timestamps.*
 
 ---
 
 ## Diagnostic Queries
 
-The following queries join across all three Bedrock tables to answer security audit and operational compliance questions. Each is presented in both line mode and table mode.
-
----
+The following queries join across all three Bedrock tables to answer security audit and operational compliance questions.
 
 ### Query 1: Regional Blast-Radius and Exposure Audit
 
@@ -78,8 +77,8 @@ WHERE
 
 | Mode | Screenshot |
 |---|---|
-| **Line mode** — each row surfaces the full agent-to-knowledge-base-to-action-group chain for `ap-southeast-2`. | ![Regional blast-radius query in line mode](../assets/line_mode_br1.png) |
-| **Table mode** — columnar view of the regional blast radius across agents, knowledge bases, and action groups. | ![Regional blast-radius query in table mode](../assets/table_mode_br1.png) |
+| **Line mode** — each row surfaces the full agent-to-knowledge-base-to-action-group chain for `ap-southeast-2`. | ![Regional blast-radius query in line mode](/img/line_mode_br1.png) |
+| **Table mode** — columnar view of the regional blast radius across agents, knowledge bases, and action groups. | ![Regional blast-radius query in table mode](/img/table_mode_br1.png) |
 
 ---
 
@@ -120,8 +119,8 @@ WHERE
 
 | Mode | Screenshot |
 |---|---|
-| **Line mode** — exposing action groups and knowledge bases that are functional but attached to non-deployable agents. | ![Stagnant workload query in line mode](../assets/line_mode_br2.png) |
-| **Table mode** — columnar listing of stranded sub-resources against `NOT_PREPARED` agents. | ![Stagnant workload query in table mode](../assets/table_mode_br2.png) |
+| **Line mode** — exposing action groups and knowledge bases that are functional but attached to non-deployable agents. | ![Stagnant workload query in line mode](/img/line_mode_br2.png) |
+| **Table mode** — columnar listing of stranded sub-resources against `NOT_PREPARED` agents. | ![Stagnant workload query in table mode](/img/table_mode_br2.png) |
 
 ---
 
@@ -163,5 +162,5 @@ ORDER BY
 
 | Mode | Screenshot |
 |---|---|
-| **Line mode** — timestamp comparison across agents, knowledge bases, and action groups for drift detection. | ![Configuration drift query in line mode](../assets/line_mode_br3.png) |
-| **Table mode** — side-by-side `updated_at` columns enabling rapid drift identification across all three resource types. | ![Configuration drift query in table mode](../assets/table_mode_br3.png) |
+| **Line mode** — timestamp comparison across agents, knowledge bases, and action groups for drift detection. | ![Configuration drift query in line mode](/img/line_mode_br3.png) |
+| **Table mode** — side-by-side `updated_at` columns enabling rapid drift identification across all three resource types. | ![Configuration drift query in table mode](/img/table_mode_br3.png) |

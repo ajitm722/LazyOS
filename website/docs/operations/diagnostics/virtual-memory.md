@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # Virtual Memory Inspection
 
 This document covers diagnostic workflows for Linux virtual memory using osquery kernel tables. The queries surface actionable system characteristics — not just raw counters — with interpretation guides that explain what the numbers actually mean.
@@ -114,6 +118,6 @@ LIMIT 15;
 
 ## Demonstration
 
-![Diagnostic virtual memory queries](../assets/diagnostic_vm.gif)
+![Diagnostic virtual memory queries](/img/diagnostic_vm.gif)
 
 *Both queries executed live in LazyOS — Query 1 captures the system pulse with kernel VM counters, Query 2 attributes physical memory, heap, and swap to individual processes via a JOIN across `processes` and `process_virtual_memory`.*

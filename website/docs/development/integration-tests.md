@@ -1,6 +1,10 @@
-# Integration Tests: osquery Client
+---
+sidebar_position: 2
+---
 
-> For unit tests (mocked backend, no external dependencies), see [`unit_tests.md`](./unit_tests.md).
+# Integration Tests
+
+For unit tests (mocked backend, no external dependencies), see [Unit Tests](./unit-tests).
 
 ## Overview
 
@@ -37,32 +41,6 @@ osqueryd --ephemeral --disable_database --disable_events \
 
 The macro sets `LAZYOS_TEST_SOCKET=/tmp/lazyos_sandbox/osquery.em` in the test environment. Tests read this variable via `os.Getenv("LAZYOS_TEST_SOCKET")`.
 
-### Daemon Lifecycle
-
-```mermaid
-sequenceDiagram
-    participant Make as Makefile
-    participant Osquery as osqueryd
-    participant Socket as /tmp/lazyos_sandbox/osquery.em
-    participant Tests as go test -tags=integration
-
-    Make->>Osquery: Start ephemeral osqueryd
-    Activate Osquery
-    Osquery->>Socket: Create Unix domain socket
-    loop Poll every 200ms
-        Make->>Socket: test -S osquery.em?
-        Socket-->>Make: exists
-    end
-    Make->>Tests: LAZYOS_TEST_SOCKET=<path> go test -tags=integration
-    Activate Tests
-    Tests->>Socket: Thrift RPC (PRAGMA table_info, SELECT)
-    Socket-->>Tests: result sets
-    Tests-->>Make: PASS / FAIL
-    Deactivate Tests
-    Make->>Osquery: Trap: kill PID
-    Deactivate Osquery
-```
-
 ## Test Catalog
 
 ### Client Connectivity
@@ -79,7 +57,7 @@ sequenceDiagram
 | `TestIntegrationGetSchema` | Asserts `GetSchema()` returns every entry in `CoreTables` with matching `Name` and `Columns`. |
 | `TestIntegrationTableHasDescription` | Asserts no `CoreTables` entry has an empty `Description`. |
 | `TestIntegrationTableHasName` | Asserts no `CoreTables` entry has an empty `Name`. |
-| `TestIntegrationDeriveColumnsConsistency` | For each table, verifies `DeriveColumnsFromSchema` round-trips correctly: the extracted column names match exactly what the helper returns when fed `"SELECT * FROM <table>"`. |
+| `TestIntegrationDeriveColumnsConsistency` | For each table, verifies `DeriveColumnsFromSchema` round-trips correctly. |
 
 ### Query Execution
 
@@ -92,14 +70,13 @@ sequenceDiagram
 
 ### Full Schema Cross-Reference
 
-#### `TestIntegrationAllTableSchemas`
+**`TestIntegrationAllTableSchemas`**
 
 For every table in `CoreTables`:
-
 1. **PRAGMA validation**: Runs `PRAGMA table_info(<name>)` via Thrift and builds a set of actual column names. Asserts every declared column exists in that set.
 2. **SELECT validation**: Runs `SELECT * FROM <name> LIMIT 1`. Asserts every declared column appears in the result's column list. If rows are returned, asserts they contain the declared column keys.
 
-#### `TestIntegrationCoreTablesAreQueryable`
+**`TestIntegrationCoreTablesAreQueryable`**
 
 Runs `SELECT COUNT(*) AS cnt FROM <name>` on every table and logs the row count. Tables that return zero rows (e.g., `docker_containers` on a host without Docker, `sudoers` without sudo rules) are still considered queryable — the test only checks that the query succeeds and returns at least one row (the COUNT result).
 

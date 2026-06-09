@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # Configuration
 
 LazyOS follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) to keep your home directory clean. Three directories matter:
@@ -10,7 +14,7 @@ LazyOS follows the [XDG Base Directory Specification](https://specifications.fre
 
 LazyOS uses `spf13/viper` for configuration. A custom config file path can be specified via the `--config` flag.
 
-### The Viper Hierarchy
+## The Viper Hierarchy
 
 When lazyos starts, Viper looks for configuration in a specific order of precedence. The highest priority wins:
 
@@ -19,7 +23,7 @@ When lazyos starts, Viper looks for configuration in a specific order of precede
 3. **Config File** (`osquery-socket: /tmp/yaml.em`)
 4. **Defaults** (`/tmp/default.em`) — Lowest priority.
 
-## Example configuration
+## Example Configuration
 
 ```yaml
 # ~/.config/lazyos/config.yml
@@ -85,11 +89,11 @@ The config overrides integrate seamlessly into the `InputHandler` ensuring help 
 
 ## Configuration Fields
 
-* **`osquery-socket`**: The Unix domain socket path that the osquery extension process listens on. This is the communication endpoint — LazyOS opens a Thrift RPC connection to this path to send SQL queries and receive result sets. The default `/tmp/osquery.em` is the standard path used by the osquery `--extension` flag, but can point to any osquery running with a custom socket.
-* **`osquery-startup-timeout`**: The maximum duration the application waits for the initial Thrift connection to the osquery daemon. Accepts Go duration strings (`"2s"`, `"5s"`, `"500ms"`). Defaults to `2s`.
-* **`osquery-query-timeout`**: The maximum duration allowed for an individual osquery query to complete before aborting. Accepts Go duration strings (`"10s"`, `"30s"`, `"1m"`). This timeout is also applied as the `MaxWaitTime` for the osquery-go socket locker, so with N concurrent goroutines waiting for the shared socket this may need to be longer than a single query's execution time. Defaults to `10s`.
-* **`log-file`**: Override the default log file path. If empty, the logger resolves the path via `DefaultLogPath` — it respects `$XDG_STATE_HOME` first, then falls back to `~/.local/state/lazyos/lazyos.log`. Defaults to `""`.
-* **`keep-log`**: Preserve the log file on disk after the application exits. When `false` (the default), the log file is automatically deleted during shutdown. Set to `true` to retain logs for debugging across sessions.
-* **`cache-db-path`**: Override the path to the persistent SQLite cache database. If empty, the path resolves to `$XDG_CACHE_HOME/lazyos/lazyos.db` (typically `~/.cache/lazyos/lazyos.db`). Defaults to `""`.
+- **`osquery-socket`**: The Unix domain socket path that the osquery extension process listens on. This is the communication endpoint — LazyOS opens a Thrift RPC connection to this path to send SQL queries and receive result sets. The default `/tmp/osquery.em` is the standard path used by the osquery `--extension` flag, but can point to any osquery running with a custom socket.
+- **`osquery-startup-timeout`**: The maximum duration the application waits for the initial Thrift connection to the osquery daemon. Accepts Go duration strings (`"2s"`, `"5s"`, `"500ms"`). Defaults to `2s`.
+- **`osquery-query-timeout`**: The maximum duration allowed for an individual osquery query to complete before aborting. Accepts Go duration strings (`"10s"`, `"30s"`, `"1m"`). This timeout is also applied as the `MaxWaitTime` for the osquery-go socket locker, so with N concurrent goroutines waiting for the shared socket this may need to be longer than a single query's execution time. Defaults to `10s`.
+- **`log-file`**: Override the default log file path. If empty, the logger resolves the path via `DefaultLogPath` — it respects `$XDG_STATE_HOME` first, then falls back to `~/.local/state/lazyos/lazyos.log`. Defaults to `""`.
+- **`keep-log`**: Preserve the log file on disk after the application exits. When `false` (the default), the log file is automatically deleted during shutdown. Set to `true` to retain logs for debugging across sessions.
+- **`cache-db-path`**: Override the path to the persistent SQLite cache database. If empty, the path resolves to `$XDG_CACHE_HOME/lazyos/lazyos.db` (typically `~/.cache/lazyos/lazyos.db`). Defaults to `""`.
 
 Viper looks for a config file at `~/.config/lazyos/config.yml` at startup (or the path given by `--config`). If the file does not exist the application uses compiled-in defaults. Environment variables with the `LAZYOS_` prefix (e.g. `LAZYOS_KEEP_LOG=true`) are also read automatically.
