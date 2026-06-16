@@ -18,6 +18,28 @@ The unit test suite spans the following packages:
 
 The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which implements the `daemons.Queryer` interface. The `Query` method returns `(rows []map[string]string, columns []string, error)`. Columns are resolved from the first row's map keys when rows > 0 (preserving computed expressions and SELECT aliases) and fall back to `DeriveColumnsFromSchema` when rows == 0. No real osquery socket connection is ever established during testing.
 
+## Coverage
+
+- **`internal/cache`**: 98.9% statement coverage.
+- **`internal/daemons`**: 100.0% statement coverage.
+- **`internal/logger`**: 100.0% statement coverage.
+- **`internal/tui`**: 97.2% statement coverage.
+- **`internal/tui/views/querybar`**: 100.0% statement coverage.
+- **`internal/tui/views/results`**: 100.0% statement coverage.
+- **`internal/tui/views/sidebar`**: 100.0% statement coverage.
+
+**Omitted from unit-test coverage (no `_test.go` files):**
+
+- `cmd/lazyos` — entry point, no logic to test.
+- `internal/config` — types-only, no logic.
+- `internal/daemons/mock` — test helpers consumed by other tests.
+- `internal/daemons/osqueryd` — integration-only (requires live osquery socket).
+- `internal/daemons/osqueryd/aws` — integration-only (requires live osquery socket + cloudquery).
+- `internal/daemons/osqueryd/kernel` — integration-only (requires live osquery socket).
+- `internal/store/sqlite` — integration-only (requires `-tags=integration`; see [Integration Tests](./integration-tests)).
+
+Overall unit-test statement coverage: **98.6%**.
+
 ## Test Suites
 
 ### `app_test.go` — Core Lifecycle + Source Queries
@@ -54,11 +76,13 @@ The backend layer is fully mocked via `internal/daemons/mock.MockQueryer`, which
 | `TestMouseWheelDoesNotSwitchFocus` | Wheel events do not change pane focus but are forwarded to the focused pane. | Sends wheel event over sidebar while querybar is focused; asserts pane unchanged. |
 
 **Focus cycle** (Ctrl+L):
+
 ```
 PaneSidebar → PaneQuery → PaneResults → PaneSidebar
 ```
 
 **Reverse cycle** (Ctrl+H):
+
 ```
 PaneSidebar → PaneResults → PaneQuery → PaneSidebar
 ```
@@ -90,6 +114,7 @@ PaneSidebar → PaneResults → PaneQuery → PaneSidebar
 | `TestFullHelp` | `FullHelp()` returns at least one row. | Asserts non-empty slice. |
 
 **Default bindings**:
+
 | Binding | Default key | Action |
 |---------|------------|--------|
 | `focus_next` | Ctrl+L | `FocusNextAction` |
@@ -112,6 +137,7 @@ PaneSidebar → PaneResults → PaneQuery → PaneSidebar
 | `TestComputePaneSizes` | Outer dimension calculation yields positive widths at 100×50. | Direct function call; sanity checks. |
 
 **Pane dimension formulas**:
+
 | Variable | Formula |
 |----------|---------|
 | `mainHeight` | `max(0, height − helpBarHeight)` |
@@ -246,6 +272,7 @@ The mock lives under `internal/daemons/mock/` and is only imported by `_test.go`
 The `testing/synctest` package (available in Go 1.26+) provides an isolated time bubble. Within `synctest.Test`, all `time.Sleep` and `time.After` calls use a fake clock that advances only when every goroutine in the bubble is durably blocked. This enables deterministic timeout tests without wall-clock waiting.
 
 **How `TestQueryTimeout` works**:
+
 1. The mock is configured with `SimulateSlowQuery=true`, `SlowDuration=5s`, and `InternalTimeout=3s`.
 2. The query cmd is executed — `handleRunQueryMsg` passes a plain context to `mock.Query(ctx, sql)` (the TUI is agnostic to timeouts).
 3. Inside the mock, `Query` wraps the context with `context.WithTimeout(ctx, 3s)` via `InternalTimeout`, then enters a `select { case <-timeoutCtx.Done(): ... ; case <-time.After(5s): ... }`.
@@ -255,24 +282,3 @@ The `testing/synctest` package (available in Go 1.26+) provides an isolated time
 The entire test completes in near-zero real time.
 
 ---
-
-## Coverage
-
-- **`internal/cache`**: 98.9% statement coverage.
-- **`internal/daemons`**: 100.0% statement coverage.
-- **`internal/logger`**: 100.0% statement coverage.
-- **`internal/tui`**: 97.2% statement coverage.
-- **`internal/tui/views/querybar`**: 100.0% statement coverage.
-- **`internal/tui/views/results`**: 100.0% statement coverage.
-- **`internal/tui/views/sidebar`**: 100.0% statement coverage.
-
-**Omitted from unit-test coverage (no `_test.go` files):**
-- `cmd/lazyos` — entry point, no logic to test.
-- `internal/config` — types-only, no logic.
-- `internal/daemons/mock` — test helpers consumed by other tests.
-- `internal/daemons/osqueryd` — integration-only (requires live osquery socket).
-- `internal/daemons/osqueryd/aws` — integration-only (requires live osquery socket + cloudquery).
-- `internal/daemons/osqueryd/kernel` — integration-only (requires live osquery socket).
-- `internal/store/sqlite` — integration-only (requires `-tags=integration`; see [Integration Tests](./integration-tests)).
-
-Overall unit-test statement coverage: **98.6%**.
